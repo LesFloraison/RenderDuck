@@ -669,9 +669,9 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
   // We don't support capturing 64-bit programs from a 32-bit install
   // because it's pointless - a 64-bit install will work for all in
   // that case. But we do want to handle the case of:
-  // 64-bit renderdoc -> 32-bit program (via 32-bit renderdoccmd)
-  //    -> 64-bit program (going back to 64-bit renderdoccmd).
-  // so we try to see if we're an x86 invoked renderdoccmd in an
+  // 64-bit renderdoc -> 32-bit program (via 32-bit renderduckcmd)
+  //    -> 64-bit program (going back to 64-bit renderduckcmd).
+  // so we try to see if we're an x86 invoked renderduckcmd in an
   // otherwise 64-bit install, and 'promote' back to 64-bit.
   if(selfWow64 && !isWow64)
   {
@@ -717,7 +717,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     }
   }
 #else
-  // farm off to alternate bitness renderdoccmd.exe
+  // farm off to alternate bitness renderduckcmd.exe
 
   // if the target process is 'wow64' that means it's 32-bit.
   capalt = (isWow64 == TRUE);
@@ -735,7 +735,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
 
       renderdocPath[idx] = 0;
 
-      wcscat_s(renderdocPath, L"\\Win32\\Development\\renderdoccmd.exe");
+      wcscat_s(renderdocPath, L"\\Win32\\Development\\renderduckcmd.exe");
     }
 
     if(!devLocation)
@@ -748,7 +748,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
 
         renderdocPath[idx] = 0;
 
-        wcscat_s(renderdocPath, L"\\Win32\\Release\\renderdoccmd.exe");
+        wcscat_s(renderdocPath, L"\\Win32\\Release\\renderduckcmd.exe");
       }
     }
 
@@ -763,7 +763,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
         *slash = 0;
 
       // append path
-      wcscat_s(renderdocPath, L"\\x86\\renderdoccmd.exe");
+      wcscat_s(renderdocPath, L"\\x86\\renderduckcmd.exe");
     }
 #else
     // if it looks like we're in the development environment, look for the alternate bitness in the
@@ -775,7 +775,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
 
       renderdocPath[idx] = 0;
 
-      wcscat_s(renderdocPath, L"\\x64\\Development\\renderdoccmd.exe");
+      wcscat_s(renderdocPath, L"\\x64\\Development\\renderduckcmd.exe");
     }
 
     if(!devLocation)
@@ -788,13 +788,13 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
 
         renderdocPath[idx] = 0;
 
-        wcscat_s(renderdocPath, L"\\x64\\Release\\renderdoccmd.exe");
+        wcscat_s(renderdocPath, L"\\x64\\Release\\renderduckcmd.exe");
       }
     }
 
     if(!devLocation)
     {
-      // look upwards on 32-bit to find the parent renderdoccmd.
+      // look upwards on 32-bit to find the parent renderduckcmd.
       wchar_t *slash = wcsrchr(renderdocPath, L'\\');
 
       // remove the filename
@@ -808,7 +808,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
         *slash = 0;
 
       // append path
-      wcscat_s(renderdocPath, L"\\renderdoccmd.exe");
+      wcscat_s(renderdocPath, L"\\renderduckcmd.exe");
     }
 #endif
 
@@ -926,11 +926,11 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       RDResult result;
 #if RENDERDOC_OFFICIAL_BUILD
       SET_ERROR_RESULT(result, ResultCode::InternalError,
-                       "Can't run 32-bit renderdoccmd to capture 32-bit program.");
+                       "Can't run 32-bit renderduckcmd to capture 32-bit program.");
 #else
       SET_ERROR_RESULT(
           result, ResultCode::InternalError,
-          "Can't run 32-bit renderdoccmd to capture 32-bit program."
+          "Can't run 32-bit renderduckcmd to capture 32-bit program."
           "If this is a locally built RenderDoc you must build both 32-bit and 64-bit versions.");
 #endif
       CloseHandle(hProcess);
@@ -963,7 +963,7 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       ResultCode code = (ResultCode)exitCode;
 
       RDResult result;
-      SET_ERROR_RESULT(result, code, "32-bit renderdoccmd returned '%s'", ToStr(code).c_str());
+      SET_ERROR_RESULT(result, code, "32-bit renderduckcmd returned '%s'", ToStr(code).c_str());
       return {code, 0};
     }
 
@@ -1497,8 +1497,8 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
 
   renderdocPath = get_dirname(renderdocPath);
 
-  // the native renderdoccmd.exe is always next to the dll. Wow32 will be somewhere else
-  rdcstr cmdpathNative = renderdocPath + "\\renderdoccmd.exe";
+  // the native renderduckcmd.exe is always next to the dll. Wow32 will be somewhere else
+  rdcstr cmdpathNative = renderdocPath + "\\renderduckcmd.exe";
   rdcstr cmdpathWow32;
 
   rdcstr shimpathNative = renderdocPath;
@@ -1507,7 +1507,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
 #if ENABLED(RDOC_X64)
 
   // native shim is just renderdocshim64.dll
-  shimpathNative = renderdocPath + "\\renderdocshim64.dll";
+  shimpathNative = renderdocPath + "\\renderduckshim64.dll";
 
   // if it looks like we're in the development environment, look for the alternate bitness in the
   // corresponding folder
@@ -1516,8 +1516,8 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
   {
     renderdocPath.erase(devLocation, ~0U);
 
-    shimpathWow32 = renderdocPath + "\\Win32\\Development\\renderdocshim32.dll";
-    cmdpathWow32 = renderdocPath + "\\Win32\\Development\\renderdoccmd.exe";
+    shimpathWow32 = renderdocPath + "\\Win32\\Development\\renderduckshim32.dll";
+    cmdpathWow32 = renderdocPath + "\\Win32\\Development\\renderduckcmd.exe";
   }
   else
   {
@@ -1527,22 +1527,22 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
     {
       renderdocPath.erase(devLocation, ~0U);
 
-      shimpathWow32 = renderdocPath + "\\Win32\\Release\\renderdocshim32.dll";
-      cmdpathWow32 = renderdocPath + "\\Win32\\Release\\renderdoccmd.exe";
+      shimpathWow32 = renderdocPath + "\\Win32\\Release\\renderduckshim32.dll";
+      cmdpathWow32 = renderdocPath + "\\Win32\\Release\\renderduckcmd.exe";
     }
   }
 
   // if we're not in the dev environment, assume it's under a x86\ subfolder
   if(devLocation < 0)
   {
-    shimpathWow32 = renderdocPath + "\\x86\\renderdocshim32.dll";
-    cmdpathWow32 = renderdocPath + "\\x86\\renderdoccmd.exe";
+    shimpathWow32 = renderdocPath + "\\x86\\renderduckshim32.dll";
+    cmdpathWow32 = renderdocPath + "\\x86\\renderduckcmd.exe";
   }
 
 #else
 
   // nothing fancy to do here for 32-bit, just point the shim next to our dll.
-  shimpathNative = renderdocPath + "\\renderdocshim32.dll";
+  shimpathNative = renderdocPath + "\\renderduckshim32.dll";
 
 #endif
 
@@ -1630,7 +1630,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
   {
     CloseHandle(hookdata.dataNative.pipe);
     RestoreRegistry(hookdata);
-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
+    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderduckcmd from '%s' (err %u)",
                         cmdpathNative.c_str(), err);
   }
 
@@ -1639,7 +1639,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
 
   RDCEraseEl(pi);
 
-// repeat the process for the Wow32 renderdoccmd
+// repeat the process for the Wow32 renderduckcmd
 #if ENABLED(RDOC_X64)
   params = StringFormat::Fmt(
       "\"%s\" globalhook --match \"%s\" --capfile \"%s\" --debuglog \"%s\" --capopts \"%s\"",
@@ -1691,7 +1691,7 @@ RDResult Process::StartGlobalHook(const rdcstr &pathmatch, const rdcstr &capture
     CloseHandle(hookdata.dataNative.pipe);
     CloseHandle(hookdata.dataWow32.pipe);
     RestoreRegistry(hookdata);
-    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderdoccmd from '%s' (err %u)",
+    RETURN_ERROR_RESULT(ResultCode::InternalError, "Can't launch renderduckcmd from '%s' (err %u)",
                         cmdpathWow32.c_str(), err);
   }
 

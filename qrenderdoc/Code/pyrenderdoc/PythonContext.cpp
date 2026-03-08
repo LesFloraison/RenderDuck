@@ -110,7 +110,7 @@ static inline QString ToQStr(PyObject *value)
   return QString();
 }
 
-static wchar_t program_name[] = L"qrenderdoc";
+static wchar_t program_name[] = L"qrenderduck";
 static wchar_t python_home[1024] = {0};
 
 struct OutputRedirector

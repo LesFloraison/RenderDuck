@@ -21,8 +21,9 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D03DF2F9-513C-4084-BBDD-1DEE8D9250D7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>renderdoccmd</RootNamespace>
-    <ProjectName>renderdoccmd</ProjectName>
+    <RootNamespace>renderduckcmd</RootNamespace>
+    <ProjectName>renderduckcmd</ProjectName>
+    <WindowsTargetPlatformVersion>$(RenderDocLatestWin10SDKVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\util\WindowsSDKTarget.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -30,27 +31,27 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -95,6 +96,7 @@
     <IncludePath>$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\$(Platform)\$(Configuration)\</OutDir>
+    <TargetName>renderduckcmd</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|Win32'">
     <ClCompile>

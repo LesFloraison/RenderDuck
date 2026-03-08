@@ -168,7 +168,7 @@ void sharedLogOutput(QtMsgType type, const QMessageLogContext &context, const QS
 
 static QString tr(const char *string)
 {
-  return QApplication::translate("qrenderdoc", string);
+  return QApplication::translate("qrenderduck", string);
 }
 
 void hideOption(QCommandLineOption &opt)
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
   // an optimisation
   qputenv("QT_NO_SUBTRACTOPAQUESIBLINGS", lit("1").toUtf8());
 
-  qInfo() << "QRenderDoc initialising.";
+  qInfo() << "QRenderDuck initialising.";
 
   if(IsRunningAsAdmin())
     qInfo() << "Running as administrator";
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 
       Catch::Session session;
 
-      session.configData().name = "QRenderDoc";
+      session.configData().name = "QRenderDuck";
       session.configData().shouldDebugBreak = Catch::isDebuggerActive();
 
       ret = session.applyCommandLine(argc, mod_argv);
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
   QApplication application(argc, argv);
 
   QCommandLineParser parser;
-  parser.setApplicationDescription(tr("Qt UI for RenderDoc"));
+  parser.setApplicationDescription(tr("Qt UI for RenderDuck"));
   QCommandLineOption helpOption = parser.addHelpOption();
   QCommandLineOption versionOption = parser.addVersionOption();
 

@@ -59,7 +59,7 @@ public:
 
     ///////////////////
 
-    rdcstr dumpFolder = FileIO::GetTempFolderFilename() + "RenderDoc\\dumps\\a";
+    rdcstr dumpFolder = FileIO::GetTempFolderFilename() + "RenderDuck\\dumps\\a";
     FileIO::CreateParentDirectory(dumpFolder);
     dumpFolder.pop_back();
     dumpFolder.pop_back();
@@ -128,14 +128,14 @@ public:
     si.dwFlags |= STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
 
-    HANDLE waitEvent = CreateEventA(NULL, TRUE, FALSE, "RENDERDOC_CRASHHANDLE");
+    HANDLE waitEvent = CreateEventA(NULL, TRUE, FALSE, "RENDERDUCK_CRASHHANDLE");
 
     rdcstr dllpath;
     FileIO::GetLibraryFilename(dllpath);
 
     rdcstr cmdline = "\"";
     cmdline += get_dirname(dllpath);
-    cmdline += "/renderdoccmd.exe\" crashhandle --pipe ";
+    cmdline += "/renderduckcmd.exe\" crashhandle --pipe ";
     cmdline += m_PipeName;
 
     rdcwstr params = StringFormat::UTF82Wide(cmdline);
@@ -165,7 +165,7 @@ private:
 
   rdcstr NewPipeName()
   {
-    return StringFormat::Fmt("\\\\.\\pipe\\RenderDocBreakpadServer%llu", Timing::GetTick());
+    return StringFormat::Fmt("\\\\.\\pipe\\RenderDuckBreakpadServer%llu", Timing::GetTick());
   }
 };
 
