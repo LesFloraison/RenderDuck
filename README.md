@@ -2,6 +2,8 @@
 
 RenderDuck is a fork of RenderDoc, aiming to bypass AC.
 
+Ducky has grown up, now she's a rider!
+
 "Oopsie, I slipped! (＞﹏＜)"
 
 ****
