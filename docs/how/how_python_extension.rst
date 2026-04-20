@@ -1,14 +1,14 @@
 How do I register a python extension?
 =====================================
 
-RenderDoc supports python extensions using the :doc:`existing python API <../python_api/index>`. These extensions can be configured to be persistent and load whenever the RenderDoc UI does, allowing users to extend the program with custom functionality.
+RiderDuck supports python extensions using the :doc:`existing python API <../python_api/index>`. These extensions can be configured to be persistent and load whenever the RiderDuck UI does, allowing users to extend the program with custom functionality.
 
-Example extensions can be found at the `community contributed repository <https://github.com/baldurk/renderdoc-contrib>`_. More information on writing an extension is available at :doc:`../python_api/ui_extensions`.
+Example extensions can be found at the `community contributed repository <https://github.com/baldurk/riderduck-contrib>`_. More information on writing an extension is available at :doc:`../python_api/ui_extensions`.
 
 Creating extensions
 -------------------
 
-Extensions are simply python modules located in the user's RenderDoc config folder, with a json manifest. The config folder varies by platform, on Windows it's ``%APPDATA%\qrenderdoc\extensions`` and on linux it's ``~/.local/share/qrenderdoc/extensions``. Each extension is a python module subfolder under this root. You can nest subfolders, e.g. ``extensions/foo/bar/first`` would be the extension ``foo.bar.first``, and treated independently from ``extensions/foo/bar/second``.
+Extensions are simply python modules located in the user's RiderDuck config folder, with a json manifest. The config folder varies by platform, on Windows it's ``%APPDATA%\qriderduck\extensions`` and on linux it's ``~/.local/share/qriderduck/extensions``. Each extension is a python module subfolder under this root. You can nest subfolders, e.g. ``extensions/foo/bar/first`` would be the extension ``foo.bar.first``, and treated independently from ``extensions/foo/bar/second``.
 
 Next to each python module's ``__init__.py`` you should create a file ``extension.json`` following this template:
 
@@ -19,7 +19,7 @@ Next to each python module's ``__init__.py`` you should create a file ``extensio
         "extension_api": 1,
         "name": "Extension name for users",
         "version": "1.0",
-        "minimum_renderdoc": "1.2",
+        "minimum_riderduck": "1.2",
         "description": "A longer description of your extension.\n\nIt can contain multiple lines",
         "author": "Your name <your@email.com>",
         "url": "url/to/repository"
@@ -27,11 +27,11 @@ Next to each python module's ``__init__.py`` you should create a file ``extensio
 
 In this JSON the ``extension_api`` field is currently fixed to 1.
 
-The ``minimum_renderdoc`` field controls whether the extension can be enabled on a given RenderDoc version, and allows you to block incompatible versions of RenderDoc.
+The ``minimum_riderduck`` field controls whether the extension can be enabled on a given RiderDuck version, and allows you to block incompatible versions of RiderDuck.
 
 The ``name``, ``description``, ``version``, ``author`` and ``url`` fields are all informational and presented to users when listing installed extensions.
 
-Without this json manifest the extension will not be enumerated by RenderDoc and displayed to users.
+Without this json manifest the extension will not be enumerated by RiderDuck and displayed to users.
 
 Enabling extensions
 -------------------
@@ -56,10 +56,10 @@ A python extension when loaded will have a ``register`` function called in its m
 .. highlight:: python
 .. code:: python
 
-    def register(version, pyrenderdoc):
-        # version is the RenderDoc Major.Minor version as a string, such as "1.2"
-        # pyrenderdoc is the CaptureContext handle, the same as the global available in the python shell
+    def register(version, pyriderduck):
+        # version is the RiderDuck Major.Minor version as a string, such as "1.2"
+        # pyriderduck is the CaptureContext handle, the same as the global available in the python shell
 
 Optionally you can define an ``unregister`` function to be called if the extension is reloaded. This takes no parameters and is simply an opportunity to clean-up or remove anything persistent that shouldn't hang around, before ``register`` is called again.
 
-Extensions use the full :doc:`python API <../python_api/index>` with all of the power that comes with it. There are interfaces geared specifically towards extensions in :doc:`the qrenderdoc module <../python_api/qrenderdoc/extensions>` which allow registering callbacks for menu items.
+Extensions use the full :doc:`python API <../python_api/index>` with all of the power that comes with it. There are interfaces geared specifically towards extensions in :doc:`the qriderduck module <../python_api/qriderduck/extensions>` which allow registering callbacks for menu items.

@@ -3,7 +3,7 @@ import traceback
 import copy
 import re
 import datetime
-import renderdoc as rd
+import riderduck as rd
 from . import util
 from . import analyse
 from . import capture
@@ -212,7 +212,7 @@ class TestCase:
         """
         Method to overload if you want to override the replay options used.
 
-        :return: The renderdoc.ReplayOptions to use.
+        :return: The riderduck.ReplayOptions to use.
         """
 
         return rd.ReplayOptions()
@@ -221,7 +221,7 @@ class TestCase:
         """
         Method to overload if you want to override the capture options used.
 
-        :return: The renderdoc.CaptureOptions to use.
+        :return: The riderduck.CaptureOptions to use.
         """
 
         return rd.CaptureOptions()
@@ -1053,7 +1053,7 @@ class TestCase:
                     taskIdx += 1
         return data
 
-    def check_renderdoc_log_asserts(self):
+    def check_riderduck_log_asserts(self):
         countAsserts = 0
         rdlog = rd.GetLogFile()
         with open(rdlog, 'r') as f:
@@ -1062,7 +1062,7 @@ class TestCase:
                     log.error(line)
                     countAsserts += 1
         if countAsserts > 0:
-            raise TestFailureException(f'Renderdoc log file contains {countAsserts} Asserts')
+            raise TestFailureException(f'Riderduck log file contains {countAsserts} Asserts')
 
     def validate_shadervariable(self, var: rd.ShaderVariable):
         if len(var.members) != 0:

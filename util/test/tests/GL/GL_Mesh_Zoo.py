@@ -1,5 +1,5 @@
 import rdtest
-import renderdoc as rd
+import riderduck as rd
 
 
 class GL_Mesh_Zoo(rdtest.TestCase):

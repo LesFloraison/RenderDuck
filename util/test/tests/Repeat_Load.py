@@ -1,6 +1,6 @@
 import rdtest
 import os
-import renderdoc as rd
+import riderduck as rd
 
 
 class Repeat_Load(rdtest.TestCase):

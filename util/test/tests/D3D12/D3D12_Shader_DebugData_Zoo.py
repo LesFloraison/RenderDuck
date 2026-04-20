@@ -1,4 +1,4 @@
-import renderdoc as rd
+import riderduck as rd
 import rdtest
 import struct
 
@@ -305,6 +305,6 @@ class D3D12_Shader_DebugData_Zoo(rdtest.TestCase):
         if failed:
             raise rdtest.TestFailureException("Some tests were not as expected")
 
-        self.check_renderdoc_log_asserts()
+        self.check_riderduck_log_asserts()
 
         rdtest.log.success("All tests matched")

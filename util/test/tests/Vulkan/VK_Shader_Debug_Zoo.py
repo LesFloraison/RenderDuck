@@ -1,4 +1,4 @@
-import renderdoc as rd
+import riderduck as rd
 from typing import List
 import rdtest
 import struct

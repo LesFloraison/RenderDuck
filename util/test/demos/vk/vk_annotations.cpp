@@ -41,7 +41,7 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
         NULL,
         VK_OBJECT_TYPE_INSTANCE,
         (uint64_t)instance,
-        RENDERDOC_APIObjectAnnotationHelper,
+        RIDERDUCK_APIObjectAnnotationHelper,
         sizeof(instance),
         instance,
     };
@@ -67,39 +67,39 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
     setName(DefaultTriVB.buffer, "Vertex Buffer");
 
     // cache the device pointer we pass in
-    void *d = RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(instance);
+    void *d = RIDERDUCK_DEVICEPOINTER_FROM_VKINSTANCE(instance);
 
     if(rdoc)
     {
-      rdoc->SetObjectAnnotation(d, img.image, "basic.bool", eRENDERDOC_Bool, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.bool", eRIDERDUCK_Bool, 0,
                                 RDAnnotationHelper(true));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.int32", eRENDERDOC_Int32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.int32", eRIDERDUCK_Int32, 0,
                                 RDAnnotationHelper(-3));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.int64", eRENDERDOC_Int64, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.int64", eRIDERDUCK_Int64, 0,
                                 RDAnnotationHelper((int64_t)-3000000000000LL));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.uint32", eRENDERDOC_UInt32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.uint32", eRIDERDUCK_UInt32, 0,
                                 RDAnnotationHelper(3));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.uint64", eRENDERDOC_UInt64, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.uint64", eRIDERDUCK_UInt64, 0,
                                 RDAnnotationHelper((uint64_t)3000000000000LL));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.float", eRENDERDOC_Float, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.float", eRIDERDUCK_Float, 0,
                                 RDAnnotationHelper(3.25f));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.double", eRENDERDOC_Double, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.double", eRIDERDUCK_Double, 0,
                                 RDAnnotationHelper(3.25000000001));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.string", eRENDERDOC_String, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.string", eRIDERDUCK_String, 0,
                                 RDAnnotationHelper("Hello, World!"));
 
-      RENDERDOC_AnnotationValue val;
+      RIDERDUCK_AnnotationValue val;
       val.apiObject = (void *)DefaultTriVB.buffer;
-      rdoc->SetObjectAnnotation(d, img.image, "basic.object", eRENDERDOC_APIObject, 0, &val);
+      rdoc->SetObjectAnnotation(d, img.image, "basic.object", eRIDERDUCK_APIObject, 0, &val);
 
-      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__offset", eRENDERDOC_UInt32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__offset", eRIDERDUCK_UInt32, 0,
                                 RDAnnotationHelper(64));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__size", eRENDERDOC_UInt32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__size", eRIDERDUCK_UInt32, 0,
                                 RDAnnotationHelper(32));
-      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__rd_format", eRENDERDOC_String, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "basic.object.__rd_format", eRIDERDUCK_String, 0,
                                 RDAnnotationHelper("float4 vertex_data;"));
 
-      rdoc->SetObjectAnnotation(d, DefaultTriVB.buffer, "__rd_format", eRENDERDOC_String, 0,
+      rdoc->SetObjectAnnotation(d, DefaultTriVB.buffer, "__rd_format", eRIDERDUCK_String, 0,
                                 RDAnnotationHelper("float3 pos;\n"
                                                    "float4 col;\n"
                                                    "float2 uv;\n"));
@@ -109,27 +109,27 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
       val.vector.float32[1] = 2.2f;
       val.vector.float32[2] = 3.3f;
       val.vector.float32[3] = 4.4f;    // should be ignored
-      rdoc->SetObjectAnnotation(d, img.image, "basic.vec3", eRENDERDOC_Float, 3, &val);
+      rdoc->SetObjectAnnotation(d, img.image, "basic.vec3", eRIDERDUCK_Float, 3, &val);
 
-      rdoc->SetObjectAnnotation(d, img.image, "deep.nested.path.to.annotation", eRENDERDOC_Int32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "deep.nested.path.to.annotation", eRIDERDUCK_Int32, 0,
                                 RDAnnotationHelper(-4));
-      rdoc->SetObjectAnnotation(d, img.image, "deep.nested.path.to.annotation2", eRENDERDOC_Int32,
+      rdoc->SetObjectAnnotation(d, img.image, "deep.nested.path.to.annotation2", eRIDERDUCK_Int32,
                                 0, RDAnnotationHelper(-5));
-      rdoc->SetObjectAnnotation(d, img.image, "deep.alternate.path.to.annotation", eRENDERDOC_Int32,
+      rdoc->SetObjectAnnotation(d, img.image, "deep.alternate.path.to.annotation", eRIDERDUCK_Int32,
                                 0, RDAnnotationHelper(-6));
 
       // deleted paths should not stay around
-      rdoc->SetObjectAnnotation(d, img.image, "deleteme", eRENDERDOC_Int32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "deleteme", eRIDERDUCK_Int32, 0,
                                 RDAnnotationHelper(-7));
-      rdoc->SetObjectAnnotation(d, img.image, "deleteme", eRENDERDOC_Empty, 0, NULL);
+      rdoc->SetObjectAnnotation(d, img.image, "deleteme", eRIDERDUCK_Empty, 0, NULL);
 
-      rdoc->SetObjectAnnotation(d, img.image, "path.deleted.by.parent", eRENDERDOC_Int32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "path.deleted.by.parent", eRIDERDUCK_Int32, 0,
                                 RDAnnotationHelper(-8));
-      rdoc->SetObjectAnnotation(d, img.image, "path.deleted.by.parent2", eRENDERDOC_Int32, 0,
+      rdoc->SetObjectAnnotation(d, img.image, "path.deleted.by.parent2", eRIDERDUCK_Int32, 0,
                                 RDAnnotationHelper(-9));
 
       // this will delete all children. `path` will still exist, but will be empty
-      rdoc->SetObjectAnnotation(d, img.image, "path.deleted", eRENDERDOC_Empty, 0, NULL);
+      rdoc->SetObjectAnnotation(d, img.image, "path.deleted", eRIDERDUCK_Empty, 0, NULL);
     }
 
     while(Running())
@@ -138,19 +138,19 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
       {
         // queue annotations are only included when in the captured frame
         if(curFrame == 2)
-          rdoc->SetCommandAnnotation(d, queue, "queue.too_old", eRENDERDOC_Int32, 0,
+          rdoc->SetCommandAnnotation(d, queue, "queue.too_old", eRIDERDUCK_Int32, 0,
                                      RDAnnotationHelper(1000));
 
-        rdoc->SetCommandAnnotation(d, queue, "queue.value", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, queue, "queue.value", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(1000));
 
-        rdoc->SetCommandAnnotation(d, queue, "command.overwritten", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, queue, "command.overwritten", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(9999));
 
-        rdoc->SetCommandAnnotation(d, queue, "command.inherited", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, queue, "command.inherited", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(1234));
 
-        rdoc->SetCommandAnnotation(d, queue, "command.deleted", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, queue, "command.deleted", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(50));
       }
 
@@ -162,16 +162,16 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
 
       if(rdoc)
       {
-        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(2000));
 
-        rdoc->SetCommandAnnotation(d, cmd, "command.overwritten", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, cmd, "command.overwritten", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(-3333));
 
-        rdoc->SetCommandAnnotation(d, cmd, "command.new", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, cmd, "command.new", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(3333));
 
-        rdoc->SetCommandAnnotation(d, cmd, "command.deleted", eRENDERDOC_Empty, 0, NULL);
+        rdoc->SetCommandAnnotation(d, cmd, "command.deleted", eRIDERDUCK_Empty, 0, NULL);
       }
 
       setMarker(cmd, "Initial");
@@ -193,7 +193,7 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
       vkCmdBeginRenderPass(cmd, mainWindow->beginRP(), VK_SUBPASS_CONTENTS_INLINE);
 
       if(rdoc)
-        rdoc->SetCommandAnnotation(d, cmd, "command.new", eRENDERDOC_Float, 0,
+        rdoc->SetCommandAnnotation(d, cmd, "command.new", eRIDERDUCK_Float, 0,
                                    RDAnnotationHelper(1.75f));
 
       vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, DefaultTriPipe);
@@ -205,8 +205,8 @@ RD_TEST(VK_Annotations, VulkanGraphicsTest)
       // deleting a value is fine if it's re-added before the next event
       if(rdoc)
       {
-        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRENDERDOC_Empty, 0, NULL);
-        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRENDERDOC_Int32, 0,
+        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRIDERDUCK_Empty, 0, NULL);
+        rdoc->SetCommandAnnotation(d, cmd, "new.value", eRIDERDUCK_Int32, 0,
                                    RDAnnotationHelper(4000));
       }
 

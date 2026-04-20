@@ -262,7 +262,7 @@ cd "${BUILD_ROOT}"
 
 export REPO_ROOT=$(realpath "$(pwd)/../..")
 
-if [ ! -f "${REPO_ROOT}"/renderdoc.sln ]; then
+if [ ! -f "${REPO_ROOT}"/riderduck.sln ]; then
 	echo "Script misconfiguration - expected root of repository in '$REPO_ROOT'";
 	exit 1;
 fi
@@ -299,10 +299,10 @@ export GITHASH=$(cd "${REPO_ROOT}" && git rev-parse HEAD)
 
 if [[ "$TYPE" == "official" ]]; then
 
-	sed -i.bak "s%RENDERDOC_OFFICIAL_BUILD 0%RENDERDOC_OFFICIAL_BUILD 1%" "${REPO_ROOT}"/renderdoc/api/replay/version.h
-	sed -i.bak "s%RENDERDOC_STABLE_BUILD 0%RENDERDOC_STABLE_BUILD 1%" "${REPO_ROOT}"/renderdoc/api/replay/version.h
+	sed -i.bak "s%RIDERDUCK_OFFICIAL_BUILD 0%RIDERDUCK_OFFICIAL_BUILD 1%" "${REPO_ROOT}"/riderduck/api/replay/version.h
+	sed -i.bak "s%RIDERDUCK_STABLE_BUILD 0%RIDERDUCK_STABLE_BUILD 1%" "${REPO_ROOT}"/riderduck/api/replay/version.h
 
-	export GITTAG=v$(egrep "#define RENDERDOC_VERSION_(MAJOR|MINOR)" "${REPO_ROOT}"/renderdoc/api/replay/version.h | tr -dc '[0-9\n]' | tr '\n' '.' | egrep -o '[0-9]+\.[0-9]+')
+	export GITTAG=v$(egrep "#define RIDERDUCK_VERSION_(MAJOR|MINOR)" "${REPO_ROOT}"/riderduck/api/replay/version.h | tr -dc '[0-9\n]' | tr '\n' '.' | egrep -o '[0-9]+\.[0-9]+')
 
 else # snapshot
 
@@ -349,11 +349,11 @@ cd "${BUILD_ROOT}"
 
 if [[ "$TYPE" == "official" ]]; then
 
-	FILENAME=RenderDoc_$(echo $GITTAG | tr -d 'v')
+	FILENAME=RiderDuck_$(echo $GITTAG | tr -d 'v')
 
 else # snapshot
 
-	FILENAME=RenderDoc_${SNAPNAME}
+	FILENAME=RiderDuck_${SNAPNAME}
 
 fi
 

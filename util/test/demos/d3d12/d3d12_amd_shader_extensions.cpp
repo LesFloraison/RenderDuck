@@ -131,15 +131,15 @@ void main(uint3 threadID : SV_DispatchThreadID)
 
     if(!agsLib)
     {
-      // try in plugins folder next to renderdoc.dll
-      HMODULE rdocmod = GetModuleHandleA("renderdoc.dll");
+      // try in plugins folder next to riderduck.dll
+      HMODULE rdocmod = GetModuleHandleA("riderduck.dll");
       char path[MAX_PATH + 1] = {};
 
       if(rdocmod)
       {
         GetModuleFileNameA(rdocmod, path, MAX_PATH);
         std::string tmp = path;
-        tmp.resize(tmp.size() - (sizeof("/renderdoc.dll") - 1));
+        tmp.resize(tmp.size() - (sizeof("/riderduck.dll") - 1));
 
         agsLib = LoadLibraryA((tmp + "/plugins/amd/ags/" + agsname).c_str());
       }
@@ -208,8 +208,8 @@ void main(uint3 threadID : SV_DispatchThreadID)
       devCreate.iid = __uuidof(ID3D12Device);
       devCreate.pAdapter = a.GetInterfacePtr();
 
-      extCreate.pAppName = L"RenderDoc demos";
-      extCreate.pEngineName = L"RenderDoc demos";
+      extCreate.pAppName = L"RiderDuck demos";
+      extCreate.pEngineName = L"RiderDuck demos";
 
       AGSReturnCode agsret =
           dyn_agsDriverExtensionsDX12_CreateDevice(ags, &devCreate, &extCreate, &ret);

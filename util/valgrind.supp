@@ -453,5 +453,5 @@
 	Memcheck:Leak
   match-leak-kinds: all
   ...
-  fun:_ZN9RenderDoc13ProcessConfigEv
+  fun:_ZN9RiderDuck13ProcessConfigEv
 }

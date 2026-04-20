@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=RiderDuck
+Comment=A stand-alone graphics API debugger
+GenericName=Graphics Debugger
+Exec=qriderduck %f
+Icon=application-x-riderduck-capture
+Terminal=false
+Type=Application
+X-MultipleArgs=false
+Categories=Development;
+StartupNotify=true
+MimeType=application/x-riderduck-capture;

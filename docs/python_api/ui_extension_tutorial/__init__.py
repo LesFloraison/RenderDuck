@@ -22,8 +22,8 @@
 # THE SOFTWARE.
 ###############################################################################
 
-import qrenderdoc as qrd
-import renderdoc as rd
+import qriderduck as qrd
+import riderduck as rd
 from typing import Optional
 
 
@@ -134,7 +134,7 @@ def register(version: str, ctx: qrd.CaptureContext):
     global extiface_version
     extiface_version = version
 
-    print("Registering my extension for RenderDoc version {}".format(version))
+    print("Registering my extension for RiderDuck version {}".format(version))
 
     ctx.Extensions().RegisterWindowMenu(qrd.WindowMenu.Tools, ["My extension"], menu_callback)
     ctx.Extensions().RegisterWindowMenu(qrd.WindowMenu.Window, ["Extension Window"], window_callback)

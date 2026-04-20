@@ -157,7 +157,7 @@ float4 main(v2f IN) : SV_Target0
 
       // set the ctxstate, so it only exists in the context's memory (which we don't track)
       ctx1->SwapDeviceContextState(ctxstate, NULL);
-      // release our resource, renderdoc will destroy it now
+      // release our resource, riderduck will destroy it now
       ctxstate = NULL;
 
       // repeatedly toggle between the states and re-destroy ctxstate

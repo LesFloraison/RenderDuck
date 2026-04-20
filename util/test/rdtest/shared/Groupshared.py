@@ -1,4 +1,4 @@
-import renderdoc as rd
+import riderduck as rd
 import struct
 import rdtest
 
@@ -108,6 +108,6 @@ class Groupshared(rdtest.TestCase):
     def check_capture(self):
         action = self.find_action("Compute Tests")
         self.check_compute_section_tests(action)
-        self.check_renderdoc_log_asserts()
+        self.check_riderduck_log_asserts()
 
         rdtest.log.success("All tests matched")

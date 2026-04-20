@@ -1,6 +1,6 @@
 import rdtest
 import struct
-import renderdoc as rd
+import riderduck as rd
 
 
 class VK_Mesh_Zoo(rdtest.TestCase):

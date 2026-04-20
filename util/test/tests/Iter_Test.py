@@ -3,7 +3,7 @@ import os
 import random
 import struct
 from typing import List
-import renderdoc as rd
+import riderduck as rd
 
 
 class Iter_Test(rdtest.TestCase):

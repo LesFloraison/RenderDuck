@@ -1,4 +1,4 @@
-import renderdoc as rd
+import riderduck as rd
 import rdtest
 
 # Not a real test, re-used by API-specific tests

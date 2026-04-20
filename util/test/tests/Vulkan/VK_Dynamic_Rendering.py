@@ -1,6 +1,6 @@
 import copy
 import rdtest
-import renderdoc as rd
+import riderduck as rd
 
 
 class VK_Dynamic_Rendering(rdtest.TestCase):

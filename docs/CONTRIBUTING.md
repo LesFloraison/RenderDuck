@@ -1,4 +1,4 @@
-# Contributing to RenderDoc
+# Contributing to RiderDuck
 
 This document is split up and organised into several sections to aid reading and linking. For small changes like one-line fixes or minor tweaks then you can just read the [quick start section](#quick-start) below.
 
@@ -8,21 +8,21 @@ If you're a regular contributor or if you have a larger amount of code to change
 
 ## Code of Conduct
 
-I want to ensure that anyone can contribute to RenderDoc with only the next bug to worry about. For that reason the project has adopted the [contributor covenent](CODE_OF_CONDUCT.md) as a code of conduct to be enforced for anyone taking part in RenderDoc development. This includes any comments on issues or any public discussion e.g. in the #renderdoc IRC channel or discord server.
+I want to ensure that anyone can contribute to RiderDuck with only the next bug to worry about. For that reason the project has adopted the [contributor covenent](CODE_OF_CONDUCT.md) as a code of conduct to be enforced for anyone taking part in RiderDuck development. This includes any comments on issues or any public discussion e.g. in the #riderduck IRC channel or discord server.
 
 If you have any queries or concerns in this regard you can get in touch with me [directly over email](mailto:baldurk@baldurk.org).
 
 ## Use of LLMs / "AI"
 
-Strictly no use whatsoever of LLMs or any similar technology is allowed for any code contributed to RenderDoc. There are no exceptions to this rule.
+Strictly no use whatsoever of LLMs or any similar technology is allowed for any code contributed to RiderDuck. There are no exceptions to this rule.
 
-## Acceptable use of RenderDoc
+## Acceptable use of RiderDuck
 
-RenderDoc is a tool intended for debugging your own projects and programs, those to which you have true ownership of. Use and abuse of RenderDoc for illegal or unethical uses including but not limited to capturing copyrighted programs that you do not own the rights to will not be tolerated. Any questions or issues related to any such use will not be answered and no support will be provided.
+RiderDuck is a tool intended for debugging your own projects and programs, those to which you have true ownership of. Use and abuse of RiderDuck for illegal or unethical uses including but not limited to capturing copyrighted programs that you do not own the rights to will not be tolerated. Any questions or issues related to any such use will not be answered and no support will be provided.
 
 ## Copyright / Contributor License Agreement
 
-Any code you submit will become part of the repository and be distributed under the [RenderDoc license](../LICENSE.md). By submitting code to the project you agree that the code is your own work and that you have the ability to give it to the project.
+Any code you submit will become part of the repository and be distributed under the [RiderDuck license](../LICENSE.md). By submitting code to the project you agree that the code is your own work and that you have the ability to give it to the project.
 
 You also agree by submitting your code that you grant all transferrable rights to the code to the project maintainer, including for example re-licensing the code, modifying the code, distributing in source or binary forms. Specifically this includes a requirement that you assign copyright to the project maintainer (Baldur Karlsson). For this reason, do not modify any copyright statements in files in any PRs.
 

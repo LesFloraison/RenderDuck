@@ -25,15 +25,15 @@ else:
 sys.path.insert(0, os.path.abspath(binpath + 'Development/pymodules'))
 sys.path.insert(0, os.path.abspath(binpath + 'Release/pymodules'))
 
-# Add the build paths to PATH so renderdoc.dll can be located
+# Add the build paths to PATH so riderduck.dll can be located
 os.environ["PATH"] = os.path.abspath(binpath + 'Development/') + os.pathsep + os.environ["PATH"]
 os.environ["PATH"] = os.path.abspath(binpath + 'Release/') + os.pathsep + os.environ["PATH"]
 
 # path to module libraries for linux
 sys.path.insert(0, os.path.abspath('../build/lib'))
 
-import renderdoc as rd
-import qrenderdoc as qrd
+import riderduck as rd
+import qriderduck as qrd
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--path', help="Add a path to interface files to search (can be used multiple times)", action='append')
@@ -43,7 +43,7 @@ parser.add_argument('-v', '--verbose',
                     help="Run verbosely", action="store_true")
 args = parser.parse_args()
 
-paths = ['../renderdoc/api/replay', '../qrenderdoc/Code/Interface']
+paths = ['../riderduck/api/replay', '../qriderduck/Code/Interface']
 if args.path is not None:
     paths += args.path
 
@@ -73,7 +73,7 @@ def make_c_type(ret: str, pattern: bool, typelist: List[str]):
     orig_type = ret
 
     # strip namespace
-    if ret[0:10] == 'renderdoc.':
+    if ret[0:10] == 'riderduck.':
         ret = ret[10:]
 
     # Handle pipelines that are renamed
@@ -121,7 +121,7 @@ def make_c_type(ret: str, pattern: bool, typelist: List[str]):
             ret = '(const )?rdcpair<{}> ?[&*]?'.format(inner) if pattern else 'rdcpair<{}>'.format(inner)
     elif pattern:
         if ret[-8:] == 'Callback':
-            ret = '(RENDERDOC_)?{}'.format(ret)
+            ret = '(RIDERDUCK_)?{}'.format(ret)
         else:
             if orig_type not in typelist:
                 typelist.append(orig_type)
@@ -166,7 +166,7 @@ def check_function(parent_name, objname, obj, source, global_func, typelist):
 
     global_pattern = ''
     if global_func:
-        global_pattern = '(RENDERDOC_CC\s*RENDERDOC_)?'
+        global_pattern = '(RIDERDUCK_CC\s*RIDERDUCK_)?'
 
     pattern = '(?s){} ?{}{}\(\s*{}\)'.format(make_c_type(ret, True, typelist), global_pattern, objname, funcargs[0])
     clean = '{} {}({})'.format(make_c_type(ret, False, typelist), objname, funcargs[1])
@@ -221,9 +221,9 @@ def check_used_types(objname, module, used_types):
                 parent_name = t[0:idx]
                 if parent_name in dir(parent):
                     parent = parent.__dict__[parent_name]
-                elif parent_name == 'renderdoc':
+                elif parent_name == 'riderduck':
                     parent = rd
-                elif parent_name == 'qrenderdoc':
+                elif parent_name == 'qriderduck':
                     parent = qrd
                 t = t[idx+1:]
                 continue
@@ -231,10 +231,10 @@ def check_used_types(objname, module, used_types):
             count += 1
             print("Error {:3} in {}: Unrecognised reference {}".format(count, objname, type_name))
             if type_name in dir(rd):
-                print("  - Maybe missing namespace to refer to renderdoc.{}?".format(type_name))
+                print("  - Maybe missing namespace to refer to riderduck.{}?".format(type_name))
             break
 
-for mod_name in ['renderdoc', 'qrenderdoc']:
+for mod_name in ['riderduck', 'qriderduck']:
     mod = sys.modules[mod_name]
     if args.verbose:
         print("===== Checks for {} =====".format(mod_name))
@@ -298,9 +298,9 @@ for mod_name in ['renderdoc', 'qrenderdoc']:
                 pass
 
             # a couple of manual cases that need parameters
-            if qualname == 'renderdoc.SDObject' and instance is None:
+            if qualname == 'riderduck.SDObject' and instance is None:
                 instance = obj("", "")
-            if qualname == 'renderdoc.SDChunk' and instance is None:
+            if qualname == 'riderduck.SDChunk' and instance is None:
                 instance = obj("")
 
             instance_warned = False
@@ -343,8 +343,8 @@ for mod_name in ['renderdoc', 'qrenderdoc']:
                         type_name = type(value).__module__ + '.' + type_name
 
                     type_name = re.sub('(.*)rdcarray_of_(.*)', 'List[\\1\\2]', type_name)
-                    type_name = re.sub('(renderdoc\.)?u?int[163264]{2}_t', 'int', type_name)
-                    type_name = re.sub('(renderdoc\.)?rdcstr', 'str', type_name)
+                    type_name = re.sub('(riderduck\.)?u?int[163264]{2}_t', 'int', type_name)
+                    type_name = re.sub('(riderduck\.)?rdcstr', 'str', type_name)
                     type_name = re.sub('Pipe_', '', type_name)
                     type_name = re.sub('StructuredBufferList', 'List[bytes]', type_name)
                     type_name = re.sub('StructuredObjectList', 'List[SDObject]', type_name)

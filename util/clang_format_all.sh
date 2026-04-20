@@ -60,7 +60,7 @@ fi
 
 if ! valid_clang_format; then
 	echo "Couldn't find correct clang-format version, was looking for $CLANG_FORMAT_VERSION"
-	echo "Renderdoc requires a very specific clang-format version to ensure there isn't any"
+	echo "Riderduck requires a very specific clang-format version to ensure there isn't any"
 	echo "variance between versions that can happen. You can install it as"
 	echo "'clang-format-$CLANG_FORMAT_VERSION' so that it doesn't interfere with any other"
 	echo "versions you might have installed, and this script will find it there"
@@ -68,5 +68,5 @@ if ! valid_clang_format; then
 	exit 1;
 fi;
 
-# Search through the code that should be formatted, exclude any non-renderdoc code.
-find qrenderdoc/ renderdoc/ renderdoccmd/ renderdocshim/ util/test/demos/ -name "3rdparty" -prune -o -name "official" -prune -o -print | grep -E ".*\.(h|c|cpp|m|mm|inl|geom|frag|vert|comp|hlsl)$" | grep -E -v "resource.h$" | awk '{printf("%s%c",$0,0)}' | xargs -0 -n1 "$CLANG_FORMAT" -i -style=file
+# Search through the code that should be formatted, exclude any non-riderduck code.
+find qriderduck/ riderduck/ riderduckcmd/ riderduckshim/ util/test/demos/ -name "3rdparty" -prune -o -name "official" -prune -o -print | grep -E ".*\.(h|c|cpp|m|mm|inl|geom|frag|vert|comp|hlsl)$" | grep -E -v "resource.h$" | awk '{printf("%s%c",$0,0)}' | xargs -0 -n1 "$CLANG_FORMAT" -i -style=file

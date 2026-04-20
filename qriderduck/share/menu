@@ -1,0 +1,6 @@
+?package(local.riderduck):needs="x11" section="Applications/Programming" \
+	title="RiderDuck" \
+	command="qriderduck" \
+	icon="/usr/share/pixmaps/riderduck-icon-32x32.xpm" \
+	icon16x16="/usr/share/pixmaps/riderduck-icon-16x16.xpm" \
+	icon32x32="/usr/share/pixmaps/riderduck-icon-32x32.xpm"

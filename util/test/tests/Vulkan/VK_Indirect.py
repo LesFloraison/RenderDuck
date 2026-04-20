@@ -1,6 +1,6 @@
 import rdtest
 import struct
-import renderdoc as rd
+import riderduck as rd
 
 
 def real_action_children(action):
