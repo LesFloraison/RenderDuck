@@ -81,7 +81,20 @@ QProcessList QProcessInfo::enumerate(bool includeWindowTitles)
     {
       QProcessInfo info;
       info.setPid((uint32_t)pe.th32ProcessID);
+      info.setParentPid((uint32_t)pe.th32ParentProcessID);
       info.setName(QString::fromStdWString(std::wstring(pe.szExeFile)));
+
+      HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pe.th32ProcessID);
+      if(process)
+      {
+        wchar_t processPath[MAX_PATH] = {};
+        DWORD processPathSize = MAX_PATH;
+
+        if(QueryFullProcessImageNameW(process, 0, processPath, &processPathSize))
+          info.setExecutablePath(QString::fromStdWString(std::wstring(processPath)));
+
+        CloseHandle(process);
+      }
 
       ret.push_back(info);
     } while(Process32Next(h, &pe));
@@ -352,6 +365,7 @@ QProcessList QProcessInfo::enumerate(bool includeWindowTitles)
 QProcessInfo::QProcessInfo()
 {
   m_pid = 0;
+  m_parentPid = 0;
 }
 
 uint32_t QProcessInfo::pid() const
@@ -364,6 +378,16 @@ void QProcessInfo::setPid(uint32_t pid)
   m_pid = pid;
 }
 
+uint32_t QProcessInfo::parentPid() const
+{
+  return m_parentPid;
+}
+
+void QProcessInfo::setParentPid(uint32_t pid)
+{
+  m_parentPid = pid;
+}
+
 const QString &QProcessInfo::name() const
 {
   return m_name;
@@ -372,6 +396,16 @@ const QString &QProcessInfo::name() const
 void QProcessInfo::setName(const QString &name)
 {
   m_name = name;
+}
+
+const QString &QProcessInfo::executablePath() const
+{
+  return m_executablePath;
+}
+
+void QProcessInfo::setExecutablePath(const QString &path)
+{
+  m_executablePath = path;
 }
 
 const QString &QProcessInfo::windowTitle() const

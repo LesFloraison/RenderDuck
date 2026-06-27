@@ -23,11 +23,16 @@
  ******************************************************************************/
 
 #include "CaptureDialog.h"
+#include <QAtomicInt>
+#include <QElapsedTimer>
+#include <QHash>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
 #include <QStandardPaths>
+#include <QSet>
+#include <QThread>
 #include "Code/QRDUtils.h"
 #include "Code/qprocessinfo.h"
 #include "Windows/Dialogs/EnvironmentEditor.h"
@@ -53,6 +58,68 @@ static QString GetDescription(const EnvironmentModification &env)
     ret = QFormatStr("Set %1 to %2").arg(env.name).arg(env.value);
 
   return ret;
+}
+
+static bool IsManualLaunchGraphicsAPI(const QString &api)
+{
+  QString lower = api.toLower();
+  return lower.contains(lit("d3d11")) || lower.contains(lit("d3d12"));
+}
+
+static bool ProbeManualLaunchGraphicsAPI(ITargetControl *conn)
+{
+  QElapsedTimer timer;
+  timer.start();
+
+  while(conn && conn->Connected() && timer.elapsed() < 50)
+  {
+    TargetControlMessage msg = conn->ReceiveMessage(RIDERDUCK_ProgressCallback());
+
+    if(msg.type == TargetControlMessageType::RegisterAPI &&
+       msg.apiUse.presenting && msg.apiUse.supported &&
+       IsManualLaunchGraphicsAPI(msg.apiUse.name))
+      return true;
+
+    if(msg.type == TargetControlMessageType::Disconnected)
+      return false;
+  }
+
+  return IsManualLaunchGraphicsAPI(conn ? QString(conn->GetAPI()) : QString());
+}
+
+static bool IsManualLaunchIgnoredProcess(const QString &name)
+{
+  QString lower = name.toLower();
+
+  return lower == lit("qriderduck.exe") || lower == lit("riderduckui.exe") ||
+         lower == lit("riderduckcmd.exe") || lower == lit("renderpro.exe") ||
+         lower == lit("conhost.exe");
+}
+
+static QString NormaliseManualLaunchPath(const QString &path)
+{
+  return QDir::fromNativeSeparators(path).toLower();
+}
+
+static bool HasWatchedAncestor(uint32_t pid, const QHash<uint32_t, uint32_t> &parents,
+                               const QSet<uint32_t> &watched)
+{
+  QSet<uint32_t> visited;
+  uint32_t cur = pid;
+
+  for(;;)
+  {
+    uint32_t parent = parents.value(cur, 0);
+
+    if(parent == 0 || visited.contains(parent))
+      return false;
+
+    if(watched.contains(parent))
+      return true;
+
+    visited.insert(parent);
+    cur = parent;
+  }
 }
 
 Q_DECLARE_METATYPE(CaptureSettings);
@@ -250,6 +317,7 @@ void CaptureDialog::SetInjectMode(bool inject)
     ui->verticalLayout->invalidate();
 
     ui->globalGroup->setVisible(false);
+    ui->waitLaunch->setVisible(false);
 
     fillProcessList();
 
@@ -265,6 +333,7 @@ void CaptureDialog::SetInjectMode(bool inject)
     ui->verticalLayout->invalidate();
 
     ui->globalGroup->setVisible(m_Ctx.Config().AllowGlobalHook);
+    ui->waitLaunch->setVisible(true);
 
     ui->launch->setText(lit("Launch"));
     this->setWindowTitle(lit("Launch Application"));
@@ -903,6 +972,11 @@ void CaptureDialog::on_launch_clicked()
   TriggerCapture();
 }
 
+void CaptureDialog::on_waitLaunch_clicked()
+{
+  WaitForManualLaunch();
+}
+
 void CaptureDialog::on_processList_activated(const QModelIndex &index)
 {
   TriggerCapture();
@@ -1122,12 +1196,17 @@ CaptureSettings CaptureDialog::LoadSettingsFromDisk(const rdcstr &filename)
 
 void CaptureDialog::UpdateGlobalHook()
 {
-  ui->globalGroup->setVisible(!IsInjectMode() && m_Ctx.Config().AllowGlobalHook &&
-                              RIDERDUCK_CanGlobalHook());
+  bool local = !m_Ctx.Replay().CurrentRemote().IsValid();
+  bool canGlobalHook = !IsInjectMode() && local && m_Ctx.Config().AllowGlobalHook &&
+                       RIDERDUCK_CanGlobalHook();
+
+  ui->globalGroup->setVisible(canGlobalHook);
+  ui->waitLaunch->setVisible(!IsInjectMode());
 
   if(ui->exePath->text().length() >= 4)
   {
     ui->toggleGlobal->setEnabled(true);
+    ui->waitLaunch->setEnabled(canGlobalHook);
     QString text = tr("Global hooking is risky!\nBe sure you know what you're doing.");
 
     if(ui->toggleGlobal->isChecked())
@@ -1138,6 +1217,7 @@ void CaptureDialog::UpdateGlobalHook()
   else
   {
     ui->toggleGlobal->setEnabled(false);
+    ui->waitLaunch->setEnabled(false);
     ui->globalLabel->setText(tr("Global hooking requires an executable path, or filename"));
   }
 }
@@ -1149,6 +1229,361 @@ void CaptureDialog::UpdateRemoteHost()
     ui->cmdLineLabel->setText(tr("Intent Arguments"));
   else
     ui->cmdLineLabel->setText(tr("Command-line Arguments"));
+
+  UpdateGlobalHook();
+}
+
+void CaptureDialog::WaitForManualLaunch()
+{
+  if(IsInjectMode())
+    return;
+
+  if(m_Ctx.Replay().CurrentRemote().IsValid())
+  {
+    RDDialog::critical(this, tr("Manual launch unavailable"),
+                       tr("Waiting for manual launch is only supported for local captures."));
+    return;
+  }
+
+  if(!m_Ctx.Config().AllowGlobalHook || !RIDERDUCK_CanGlobalHook())
+  {
+    RDDialog::critical(this, tr("Global hook unavailable"),
+                       tr("Global hook capture is not available in this configuration."));
+    return;
+  }
+
+  QString exe = ui->exePath->text().trimmed();
+
+  if(exe.isEmpty())
+  {
+    RDDialog::critical(this, tr("No executable selected"),
+                       tr("No program selected to wait for, click browse next to 'Executable Path' "
+                          "above to select the program."));
+    return;
+  }
+
+  if(!QFileInfo::exists(exe) && QStandardPaths::findExecutable(exe).isEmpty())
+  {
+    RDDialog::critical(
+        this, tr("Invalid executable"),
+        tr("Invalid executable: %1\nCan't locate this path or a matching executable in PATH")
+            .arg(exe));
+    return;
+  }
+
+  if(!m_Main->PromptCloseCapture())
+    return;
+
+  if(!IsRunningAsAdmin())
+  {
+    QMessageBox::StandardButton res = RDDialog::question(
+        this, tr("Restart as admin?"),
+        tr("RiderDuck needs to restart with administrator privileges. Restart?"),
+        RDDialog::YesNoCancel);
+
+    if(res == QMessageBox::Yes)
+    {
+      QString capfile = QDir::temp().absoluteFilePath(lit("global.cap"));
+
+      bool wasChecked = ui->AutoStart->isChecked();
+      ui->AutoStart->setChecked(false);
+
+      SaveSettings(capfile);
+
+      ui->AutoStart->setChecked(wasChecked);
+
+      m_Ctx.Config().Save();
+
+      bool success = RunProcessAsAdmin(qApp->applicationFilePath(), QStringList() << capfile);
+
+      if(success)
+      {
+        m_Ctx.Config().Close();
+        m_Ctx.GetMainWindow()->Widget()->close();
+      }
+
+      return;
+    }
+
+    return;
+  }
+
+  SaveSettings(mostRecentFilename());
+  PopulateMostRecent();
+
+  QList<QWidget *> enableDisableWidgets = {ui->exePath,       ui->exePathBrowse, ui->workDirPath,
+                                           ui->workDirBrowse, ui->cmdline,       ui->launch,
+                                           ui->waitLaunch,    ui->saveSettings,  ui->loadSettings};
+
+  for(QWidget *o : ui->optionsGroup->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly))
+    if(o)
+      enableDisableWidgets << o;
+
+  for(QWidget *o : ui->actionGroup->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly))
+    if(o)
+      enableDisableWidgets << o;
+
+  QSet<uint32_t> existingTargets;
+  uint32_t nextIdent = 0;
+
+  for(;;)
+  {
+    uint32_t prevIdent = nextIdent;
+    nextIdent = RIDERDUCK_EnumerateRemoteTargets("localhost", nextIdent);
+
+    if(nextIdent == 0 || prevIdent >= nextIdent)
+      break;
+
+    existingTargets.insert(nextIdent);
+  }
+
+  QSet<uint32_t> existingPids;
+
+  for(const QProcessInfo &info : QProcessInfo::enumerate(false))
+    existingPids.insert(info.pid());
+
+  if(RIDERDUCK_IsGlobalHookActive())
+    RIDERDUCK_StopGlobalHook();
+
+  QString capturefile = m_Ctx.TempCaptureFilename(QFileInfo(exe).baseName());
+  CaptureSettings settings = Settings();
+  CaptureOptions opts = settings.options;
+  rdcarray<EnvironmentModification> env = settings.environment;
+  ResultDetails success = RIDERDUCK_StartGlobalHook(exe, capturefile, opts);
+
+  if(!success.OK())
+  {
+    RDDialog::critical(this, tr("Couldn't start global hook"),
+                       tr("Aborting. Couldn't start global hook.\n"
+                          "%1")
+                           .arg(success.Message()));
+    UpdateGlobalHook();
+    return;
+  }
+
+  setEnabledMultiple(enableDisableWidgets, false);
+  ui->toggleGlobal->setEnabled(false);
+  ui->toggleGlobal->setText(tr("Disable Global Hook"));
+
+  QAtomicInt cancelled = 0;
+  QAtomicInt done = 0;
+  uint32_t ident = 0;
+
+  QString resolvedExe = QFileInfo::exists(exe) ? exe : QStandardPaths::findExecutable(exe);
+  QString selectedExeName = QFileInfo(resolvedExe).fileName().toLower();
+  QString selectedExeStem = QFileInfo(resolvedExe).completeBaseName().toLower();
+  QString selectedExePath = NormaliseManualLaunchPath(QFileInfo(resolvedExe).absoluteFilePath());
+  QString selectedExeDir = NormaliseManualLaunchPath(QFileInfo(resolvedExe).absolutePath());
+  if(!selectedExeDir.endsWith(lit("/")))
+    selectedExeDir += lit("/");
+  QByteArray username = GetSystemUsername().toUtf8();
+
+  LambdaThread *th = new LambdaThread([&cancelled, &done, &ident, existingTargets, existingPids,
+                                       selectedExeName, selectedExeStem, selectedExePath,
+                                       selectedExeDir, username, capturefile, env, opts]() {
+    QSet<uint32_t> watchedPids;
+    QSet<uint32_t> childPids;
+    QSet<uint32_t> injectedPids;
+    QHash<uint32_t, int> injectAttempts;
+    uint32_t candidateIdent = 0;
+    int candidateLoops = 0;
+
+    auto isRelatedProcess = [&](uint32_t pid, const QHash<uint32_t, QString> &processNames,
+                                const QHash<uint32_t, QString> &processPaths) {
+      QString processName = processNames.value(pid);
+      QString processPath = processPaths.value(pid);
+
+      if(processPath == selectedExePath || (processPath.isEmpty() && processName == selectedExeName))
+        return true;
+
+      if(!processPath.isEmpty() && processPath.startsWith(selectedExeDir))
+        return true;
+
+      return false;
+    };
+
+    auto inspectTargets = [&](const QHash<uint32_t, QString> &processNames,
+                              const QHash<uint32_t, QString> &processPaths) {
+      uint32_t nextIdent = 0;
+
+      for(;;)
+      {
+        uint32_t prevIdent = nextIdent;
+        nextIdent = RIDERDUCK_EnumerateRemoteTargets("localhost", nextIdent);
+
+        if(nextIdent == 0 || prevIdent >= nextIdent)
+          break;
+
+        ITargetControl *conn =
+            RIDERDUCK_CreateTargetControl("localhost", nextIdent, username.data(), false);
+
+        if(!conn)
+          continue;
+
+        uint32_t pid = conn->GetPID();
+        QString target = conn->GetTarget();
+        QString api = conn->GetAPI();
+        bool graphicsAPI = false;
+        bool selectedTarget =
+            pid != 0 && (processPaths.value(pid) == selectedExePath ||
+                         (processPaths.value(pid).isEmpty() &&
+                          processNames.value(pid) == selectedExeName) ||
+                         target.toLower() == selectedExeName ||
+                         target.toLower() == selectedExeStem);
+        bool relatedTarget = pid != 0 && isRelatedProcess(pid, processNames, processPaths);
+
+        if(existingTargets.contains(nextIdent))
+        {
+          conn->Shutdown();
+          continue;
+        }
+
+        if(!selectedTarget && !relatedTarget)
+        {
+          conn->Shutdown();
+          continue;
+        }
+
+        watchedPids.insert(pid);
+        graphicsAPI = IsManualLaunchGraphicsAPI(api) || ProbeManualLaunchGraphicsAPI(conn);
+
+        conn->Shutdown();
+
+        if(selectedTarget || graphicsAPI)
+        {
+          ident = nextIdent;
+          done.store(1);
+          return true;
+        }
+
+        if(candidateIdent == 0)
+        {
+          candidateIdent = nextIdent;
+          candidateLoops = 0;
+        }
+      }
+
+      if(candidateIdent != 0 && childPids.isEmpty() && candidateLoops >= 240)
+      {
+        ident = candidateIdent;
+        done.store(1);
+        return true;
+      }
+
+      return false;
+    };
+
+    while(!cancelled.load())
+    {
+      QProcessList processes = QProcessInfo::enumerate(false);
+      QHash<uint32_t, uint32_t> parents;
+      QHash<uint32_t, QString> processNames;
+      QHash<uint32_t, QString> processPaths;
+
+      for(const QProcessInfo &info : processes)
+      {
+        parents.insert(info.pid(), info.parentPid());
+        processNames.insert(info.pid(), info.name().toLower());
+        processPaths.insert(info.pid(), NormaliseManualLaunchPath(info.executablePath()));
+      }
+
+      for(const QProcessInfo &info : processes)
+      {
+        uint32_t pid = info.pid();
+
+        if(pid == 0 || existingPids.contains(pid))
+          continue;
+
+        QString processName = info.name().toLower();
+        QString processPath = NormaliseManualLaunchPath(info.executablePath());
+        bool selectedExe = processPath == selectedExePath ||
+                           (processPath.isEmpty() && processName == selectedExeName);
+        bool relatedPath = !processPath.isEmpty() && processPath.startsWith(selectedExeDir);
+        bool watchedChild = HasWatchedAncestor(pid, parents, watchedPids);
+
+        if(selectedExe || watchedChild || relatedPath)
+        {
+          watchedPids.insert(pid);
+
+          if(watchedChild)
+            childPids.insert(pid);
+        }
+      }
+
+      for(const QProcessInfo &info : processes)
+      {
+        uint32_t pid = info.pid();
+
+        if(pid == 0 || existingPids.contains(pid) || !watchedPids.contains(pid) ||
+           injectedPids.contains(pid) ||
+           IsManualLaunchIgnoredProcess(info.name()))
+          continue;
+
+        QString processName = info.name().toLower();
+        QString processPath = NormaliseManualLaunchPath(info.executablePath());
+        bool selectedExe = processPath == selectedExePath ||
+                           (processPath.isEmpty() && processName == selectedExeName);
+        int maxAttempts = selectedExe ? 20 : 1;
+
+        if(injectAttempts.value(pid, 0) >= maxAttempts)
+          continue;
+
+        injectAttempts[pid] = injectAttempts.value(pid, 0) + 1;
+
+        ExecuteResult ret = RIDERDUCK_InjectIntoProcess(pid, env, capturefile, opts, false);
+
+        if(ret.result.code == ResultCode::Succeeded && ret.ident != 0)
+        {
+          injectedPids.insert(pid);
+
+          if(candidateIdent == 0)
+          {
+            candidateIdent = ret.ident;
+            candidateLoops = 0;
+          }
+        }
+      }
+
+      if(inspectTargets(processNames, processPaths))
+        return;
+
+      if(candidateIdent != 0)
+        candidateLoops++;
+      QThread::msleep(250);
+    }
+
+    done.store(1);
+  });
+
+  th->setName(lit("WaitForManualLaunch"));
+  th->start();
+
+  ShowProgressDialog(
+      this, tr("Waiting for %1 to launch...").arg(QFileInfo(exe).fileName()),
+      [&done]() { return done.load() != 0; }, ProgressUpdateMethod(),
+      [&cancelled]() { cancelled.store(1); });
+
+  cancelled.store(1);
+  th->wait();
+  th->deleteLater();
+
+  if(RIDERDUCK_IsGlobalHookActive())
+    RIDERDUCK_StopGlobalHook();
+
+  setEnabledMultiple(enableDisableWidgets, true);
+  ui->toggleGlobal->setEnabled(true);
+  ui->toggleGlobal->setText(tr("Enable Global Hook"));
+  ui->toggleGlobal->setChecked(false);
+  UpdateGlobalHook();
+
+  if(ident == 0)
+    return;
+
+  LiveCapture *live = new LiveCapture(m_Ctx, QString(), QString(), ident, m_Main, m_Main);
+  m_Main->ShowLiveCapture(live);
+
+  if(ui->queueFrameCap->isChecked())
+    live->QueueCapture((int)ui->queuedFrame->value(), (int)ui->numFrames->value());
 }
 
 void CaptureDialog::SetEnvironmentModifications(const rdcarray<EnvironmentModification> &modifications)

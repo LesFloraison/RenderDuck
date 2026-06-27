@@ -100,6 +100,7 @@ private slots:
   void on_loadLastCapture_clicked();
 
   void on_launch_clicked();
+  void on_waitLaunch_clicked();
 
   void on_toggleGlobal_clicked();
 
@@ -133,5 +134,6 @@ private:
   CaptureSettings LoadSettingsFromDisk(const rdcstr &filename);
 
   void CheckAndroidSetup(QString &filename);
+  void WaitForManualLaunch();
   AndroidFlags m_AndroidFlags;
 };

@@ -873,6 +873,16 @@
        </spacer>
       </item>
       <item>
+       <widget class="QPushButton" name="waitLaunch">
+        <property name="toolTip">
+         <string>Wait for the selected program to be started manually, then attach RiderDuck via the global hook</string>
+        </property>
+        <property name="text">
+         <string>Wait for Launch</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="launch">
         <property name="toolTip">
          <string>Launch the selected program with RiderDuck enabled for capture</string>
