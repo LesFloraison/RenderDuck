@@ -115,6 +115,9 @@
     <Filter Include="3rdparty\interceptor-lib">
       <UniqueIdentifier>{0362a726-a8e6-436e-b523-893693163440}</UniqueIdentifier>
     </Filter>
+    <Filter Include="3rdparty\detours">
+      <UniqueIdentifier>{e349aaf7-1fe2-4f68-bb48-3f78ba47408d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="3rdparty\interceptor-lib\ARM">
       <UniqueIdentifier>{cb120bec-b864-4240-9b04-369ce8d60316}</UniqueIdentifier>
     </Filter>
@@ -584,6 +587,36 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="3rdparty\detours\creatwth.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\detours.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disasm.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disolarm.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disolarm64.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disolia64.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disolx64.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\disolx86.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\image.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdparty\detours\modules.cpp">
+      <Filter>3rdparty\detours</Filter>
+    </ClCompile>
     <ClCompile Include="maths\camera.cpp">
       <Filter>Common\Maths</Filter>
     </ClCompile>

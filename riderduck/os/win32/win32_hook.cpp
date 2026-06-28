@@ -33,6 +33,7 @@
 #include <set>
 #include "common/common.h"
 #include "common/threading.h"
+#include "detours.h"
 #include "hooks/hooks.h"
 #include "os/os_specific.h"
 #include "strings/string_utils.h"
@@ -42,6 +43,10 @@
 // map from address of IAT entry, to original contents
 std::map<void **, void *> s_InstalledHooks;
 Threading::CriticalSection installedLock;
+
+// map from address of stored original function pointer, to hook function
+std::map<void **, void *> s_InstalledExportDetours;
+Threading::CriticalSection detourLock;
 
 bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 {
@@ -77,6 +82,61 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
   {
     RDCERR("Failed to restore IAT entry protection 0x%p", IATentry);
     return false;
+  }
+
+  return true;
+}
+
+bool ApplyExportDetour(const char *libraryName, HMODULE module, FunctionHook &hook)
+{
+  if(module == NULL || hook.orig == NULL || hook.hook == NULL)
+    return false;
+
+  // Keep the loader hooks on the existing IAT/GetProcAddress path. Detouring these requires
+  // every internal call site to use a trampoline and is higher risk than the D3D/DXGI exports.
+  if(!_stricmp(libraryName, "kernel32.dll") || !_stricmp(libraryName, "kernelbase.dll") ||
+     strstr(libraryName, "api-ms-win-core-libraryloader") == libraryName)
+    return false;
+
+  FARPROC realFunc = GetProcAddress(module, hook.function.c_str());
+
+  if(realFunc == NULL || realFunc == hook.hook)
+    return false;
+
+  {
+    SCOPED_LOCK(detourLock);
+
+    if(s_InstalledExportDetours.find(hook.orig) != s_InstalledExportDetours.end())
+      return true;
+
+    if(*hook.orig == NULL)
+      *hook.orig = (void *)realFunc;
+    else if(*hook.orig != (void *)realFunc)
+      return false;
+
+#if ENABLED(VERBOSE_DEBUG_HOOK)
+    RDCDEBUG("Detouring export for %s!%s: %p to %p", libraryName, hook.function.c_str(), realFunc,
+             hook.hook);
+#endif
+
+    LONG ret = DetourTransactionBegin();
+    if(ret == NO_ERROR)
+      ret = DetourUpdateThread(GetCurrentThread());
+    if(ret == NO_ERROR)
+      ret = DetourAttach((PVOID *)hook.orig, hook.hook);
+    if(ret == NO_ERROR)
+      ret = DetourTransactionCommit();
+    else
+      DetourTransactionAbort();
+
+    if(ret != NO_ERROR)
+    {
+      RDCWARN("Failed to detour export for %s!%s: 0x%08x", libraryName, hook.function.c_str(), ret);
+      *hook.orig = (void *)realFunc;
+      return false;
+    }
+
+    s_InstalledExportDetours[hook.orig] = hook.hook;
   }
 
   return true;
@@ -211,6 +271,9 @@ struct CachedHookData
           }
 
           it->second.FetchOrdinalNames();
+
+          for(FunctionHook &hook : it->second.FunctionHooks)
+            ApplyExportDetour(it->first.c_str(), module, hook);
         }
         else if(it->second.module != module)
         {
@@ -258,6 +321,9 @@ struct CachedHookData
             }
 
             it->second.module = module;
+
+            for(FunctionHook &hook : it->second.FunctionHooks)
+              ApplyExportDetour(it->first.c_str(), module, hook);
           }
         }
       }
@@ -790,6 +856,9 @@ FARPROC WINAPI Hooked_GetProcAddress(HMODULE mod, LPCSTR func)
         }
 
         it->second.FetchOrdinalNames();
+
+        for(FunctionHook &hook : it->second.FunctionHooks)
+          ApplyExportDetour(it->first.c_str(), it->second.module, hook);
       }
     }
 
@@ -879,32 +948,29 @@ static void InitHookData()
     s_HookData = new CachedHookData;
 
     RDCASSERT(s_HookData->DllHooks.empty());
-    s_HookData->DllHooks["kernel32.dll"].FunctionHooks.push_back(
-        FunctionHook("LoadLibraryA", NULL, &Hooked_LoadLibraryA));
-    s_HookData->DllHooks["kernel32.dll"].FunctionHooks.push_back(
-        FunctionHook("LoadLibraryW", NULL, &Hooked_LoadLibraryW));
-    s_HookData->DllHooks["kernel32.dll"].FunctionHooks.push_back(
-        FunctionHook("LoadLibraryExA", NULL, &Hooked_LoadLibraryExA));
-    s_HookData->DllHooks["kernel32.dll"].FunctionHooks.push_back(
-        FunctionHook("LoadLibraryExW", NULL, &Hooked_LoadLibraryExW));
-    s_HookData->DllHooks["kernel32.dll"].FunctionHooks.push_back(
-        FunctionHook("GetProcAddress", NULL, &Hooked_GetProcAddress));
+
+    auto registerLibraryLoaderHooks = [](const char *dll) {
+      s_HookData->DllHooks[dll].FunctionHooks.push_back(
+          FunctionHook("LoadLibraryA", NULL, &Hooked_LoadLibraryA));
+      s_HookData->DllHooks[dll].FunctionHooks.push_back(
+          FunctionHook("LoadLibraryW", NULL, &Hooked_LoadLibraryW));
+      s_HookData->DllHooks[dll].FunctionHooks.push_back(
+          FunctionHook("LoadLibraryExA", NULL, &Hooked_LoadLibraryExA));
+      s_HookData->DllHooks[dll].FunctionHooks.push_back(
+          FunctionHook("LoadLibraryExW", NULL, &Hooked_LoadLibraryExW));
+      s_HookData->DllHooks[dll].FunctionHooks.push_back(
+          FunctionHook("GetProcAddress", NULL, &Hooked_GetProcAddress));
+    };
+
+    registerLibraryLoaderHooks("kernel32.dll");
+    registerLibraryLoaderHooks("kernelbase.dll");
 
     for(const char *apiset :
         {"api-ms-win-core-libraryloader-l1-1-0.dll", "api-ms-win-core-libraryloader-l1-1-1.dll",
          "api-ms-win-core-libraryloader-l1-1-2.dll", "api-ms-win-core-libraryloader-l1-2-0.dll",
          "api-ms-win-core-libraryloader-l1-2-1.dll"})
     {
-      s_HookData->DllHooks[apiset].FunctionHooks.push_back(
-          FunctionHook("LoadLibraryA", NULL, &Hooked_LoadLibraryA));
-      s_HookData->DllHooks[apiset].FunctionHooks.push_back(
-          FunctionHook("LoadLibraryW", NULL, &Hooked_LoadLibraryW));
-      s_HookData->DllHooks[apiset].FunctionHooks.push_back(
-          FunctionHook("LoadLibraryExA", NULL, &Hooked_LoadLibraryExA));
-      s_HookData->DllHooks[apiset].FunctionHooks.push_back(
-          FunctionHook("LoadLibraryExW", NULL, &Hooked_LoadLibraryExW));
-      s_HookData->DllHooks[apiset].FunctionHooks.push_back(
-          FunctionHook("GetProcAddress", NULL, &Hooked_GetProcAddress));
+      registerLibraryLoaderHooks(apiset);
     }
 
     GetModuleHandleEx(
@@ -1010,6 +1076,28 @@ void LibraryHooks::RemoveHooks()
       continue;
     }
   }
+
+  {
+    SCOPED_LOCK(detourLock);
+
+    for(auto it = s_InstalledExportDetours.begin(); it != s_InstalledExportDetours.end(); ++it)
+    {
+      LONG ret = DetourTransactionBegin();
+      if(ret == NO_ERROR)
+        ret = DetourUpdateThread(GetCurrentThread());
+      if(ret == NO_ERROR)
+        ret = DetourDetach((PVOID *)it->first, it->second);
+      if(ret == NO_ERROR)
+        ret = DetourTransactionCommit();
+      else
+        DetourTransactionAbort();
+
+      if(ret != NO_ERROR)
+        RDCWARN("Failed to remove export detour 0x%p -> 0x%p: 0x%08x", it->first, it->second, ret);
+    }
+
+    s_InstalledExportDetours.clear();
+  }
 }
 
 bool LibraryHooks::Detect(const char *identifier)
@@ -1048,6 +1136,9 @@ void Win32_ManualHookModule(rdcstr modName, HMODULE module)
     if(hook.orig)
       *hook.orig = GetProcAddress(module, hook.function.c_str());
   }
+
+  for(FunctionHook &hook : s_HookData->DllHooks[modName].FunctionHooks)
+    ApplyExportDetour(modName.c_str(), module, hook);
 
   s_HookData->ApplyHooks(modName.c_str(), module);
 }
