@@ -1,6 +1,6 @@
 <p align="center"><img src="https://img.floraison.io/RenderDuck_small.png" /></p>
 
-RenderDuck is a fork of RenderDoc, aiming to bypass AC.
+RenderDuck is a fork of RenderDoc, aiming to [DATA EXPUNGED].
 
 Ducky has grown up, now she's a rider!
 
