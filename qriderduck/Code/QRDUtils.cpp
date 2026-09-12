@@ -2955,6 +2955,11 @@ public:
   }
 
   void enableCancel() { setCancelButtonText(tr("Cancel")); }
+  void setStatusText(const QString &text)
+  {
+    m_Label.setTextFormat(Qt::PlainText);
+    setLabelText(text);
+  }
   void setPercentage(float percent) { setValue(int(maxProgress * percent)); }
   void setInfinite(bool infinite)
   {
@@ -3312,12 +3317,17 @@ QStringList ParseArgsList(const QString &args)
 }
 
 void ShowProgressDialog(QWidget *window, const QString &labelText, ProgressFinishedMethod finished,
-                        ProgressUpdateMethod update, ProgressCancelMethod cancel)
+                        ProgressUpdateMethod update, ProgressCancelMethod cancel,
+                        ProgressLabelMethod label)
 {
   if(finished())
     return;
 
   RDProgressDialog dialog(labelText, window);
+
+  // Dynamic status can include a process name, PID and an injection error.
+  if(label)
+    dialog.setMaximumSize(QSize(650, 400));
 
   if(cancel)
     dialog.enableCancel();
@@ -3328,13 +3338,20 @@ void ShowProgressDialog(QWidget *window, const QString &labelText, ProgressFinis
   QSemaphore tickerSemaphore(1);
 
   // start a lambda thread to tick our functions and close the progress dialog when we're done.
-  LambdaThread progressTickerThread([finished, update, &dialog, &tickerSemaphore]() {
+  LambdaThread progressTickerThread([finished, update, label, &dialog, &tickerSemaphore]() {
     while(tickerSemaphore.available())
     {
       QThread::msleep(30);
 
       if(update)
         GUIInvoke::call(&dialog, [update, &dialog]() { dialog.setPercentage(update()); });
+
+      if(label)
+        GUIInvoke::call(&dialog, [label, &dialog]() {
+          QString text = label();
+          if(text != dialog.labelText())
+            dialog.setStatusText(text);
+        });
 
       GUIInvoke::call(&dialog, [finished, &tickerSemaphore]() {
         if(finished())

@@ -1026,6 +1026,8 @@ class QElapsedTimer;
 typedef std::function<float()> ProgressUpdateMethod;
 typedef std::function<bool()> ProgressFinishedMethod;
 typedef std::function<void()> ProgressCancelMethod;
+// Called on the GUI thread, independently of percentage updates (including infinite progress).
+typedef std::function<QString()> ProgressLabelMethod;
 
 QStringList ParseArgsList(const QString &args);
 bool IsRunningAsAdmin();
@@ -1037,7 +1039,8 @@ void RevealFilenameInExternalFileBrowser(const QString &filePath);
 
 void ShowProgressDialog(QWidget *window, const QString &labelText, ProgressFinishedMethod finished,
                         ProgressUpdateMethod update = ProgressUpdateMethod(),
-                        ProgressCancelMethod cancel = ProgressCancelMethod());
+                        ProgressCancelMethod cancel = ProgressCancelMethod(),
+                        ProgressLabelMethod label = ProgressLabelMethod());
 
 void UpdateTransferProgress(qint64 xfer, qint64 total, QElapsedTimer *timer,
                             QProgressBar *progressBar, QLabel *progressLabel, QString progressText);

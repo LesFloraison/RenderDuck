@@ -28,10 +28,12 @@
 #include <QHash>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QSet>
 #include <QSortFilterProxyModel>
 #include <QStandardItemModel>
 #include <QStandardPaths>
-#include <QSet>
 #include <QThread>
 #include "Code/QRDUtils.h"
 #include "Code/qprocessinfo.h"
@@ -1368,6 +1370,9 @@ void CaptureDialog::WaitForManualLaunch()
   QAtomicInt cancelled = 0;
   QAtomicInt done = 0;
   uint32_t ident = 0;
+  QMutex statusMutex;
+  QString statusText = tr("Waiting for process: %1...").arg(QFileInfo(exe).fileName());
+  QString launchError;
 
   QString resolvedExe = QFileInfo::exists(exe) ? exe : QStandardPaths::findExecutable(exe);
   QString selectedExeName = QFileInfo(resolvedExe).fileName().toLower();
@@ -1380,11 +1385,19 @@ void CaptureDialog::WaitForManualLaunch()
 
   LambdaThread *th = new LambdaThread([&cancelled, &done, &ident, existingTargets, existingPids,
                                        selectedExeName, selectedExeStem, selectedExePath,
-                                       selectedExeDir, username, capturefile, env, opts]() {
+                                       selectedExeDir, username, capturefile, env, opts,
+                                       &statusMutex, &statusText, &launchError]() {
     QSet<uint32_t> watchedPids;
     QSet<uint32_t> childPids;
     QSet<uint32_t> injectedPids;
     QHash<uint32_t, int> injectAttempts;
+    QHash<uint32_t, QString> injectErrors;
+    const int maxSelectedAttempts = 20;
+    bool hadSelectedProcess = false;
+    auto setStatus = [&](const QString &text) {
+      QMutexLocker lock(&statusMutex);
+      statusText = text;
+    };
     uint32_t candidateIdent = 0;
     int candidateLoops = 0;
 
@@ -1425,11 +1438,10 @@ void CaptureDialog::WaitForManualLaunch()
         QString api = conn->GetAPI();
         bool graphicsAPI = false;
         bool selectedTarget =
-            pid != 0 && (processPaths.value(pid) == selectedExePath ||
-                         (processPaths.value(pid).isEmpty() &&
-                          processNames.value(pid) == selectedExeName) ||
-                         target.toLower() == selectedExeName ||
-                         target.toLower() == selectedExeStem);
+            pid != 0 &&
+            (processPaths.value(pid) == selectedExePath ||
+             (processPaths.value(pid).isEmpty() && processNames.value(pid) == selectedExeName) ||
+             target.toLower() == selectedExeName || target.toLower() == selectedExeStem);
         bool relatedTarget = pid != 0 && isRelatedProcess(pid, processNames, processPaths);
 
         if(existingTargets.contains(nextIdent))
@@ -1479,6 +1491,7 @@ void CaptureDialog::WaitForManualLaunch()
       QHash<uint32_t, uint32_t> parents;
       QHash<uint32_t, QString> processNames;
       QHash<uint32_t, QString> processPaths;
+      QSet<uint32_t> selectedPids;
 
       for(const QProcessInfo &info : processes)
       {
@@ -1501,6 +1514,15 @@ void CaptureDialog::WaitForManualLaunch()
         bool relatedPath = !processPath.isEmpty() && processPath.startsWith(selectedExeDir);
         bool watchedChild = HasWatchedAncestor(pid, parents, watchedPids);
 
+        if(selectedExe)
+        {
+          hadSelectedProcess = true;
+          selectedPids.insert(pid);
+          if(!watchedPids.contains(pid))
+            setStatus(
+                tr("Process detected: %1 (PID %2).\nPreparing to inject...").arg(info.name()).arg(pid));
+        }
+
         if(selectedExe || watchedChild || relatedPath)
         {
           watchedPids.insert(pid);
@@ -1515,26 +1537,38 @@ void CaptureDialog::WaitForManualLaunch()
         uint32_t pid = info.pid();
 
         if(pid == 0 || existingPids.contains(pid) || !watchedPids.contains(pid) ||
-           injectedPids.contains(pid) ||
-           IsManualLaunchIgnoredProcess(info.name()))
+           injectedPids.contains(pid) || IsManualLaunchIgnoredProcess(info.name()))
           continue;
+
+        if(cancelled.load())
+          break;
 
         QString processName = info.name().toLower();
         QString processPath = NormaliseManualLaunchPath(info.executablePath());
         bool selectedExe = processPath == selectedExePath ||
                            (processPath.isEmpty() && processName == selectedExeName);
-        int maxAttempts = selectedExe ? 20 : 1;
+        int maxAttempts = selectedExe ? maxSelectedAttempts : 1;
 
         if(injectAttempts.value(pid, 0) >= maxAttempts)
           continue;
 
         injectAttempts[pid] = injectAttempts.value(pid, 0) + 1;
 
+        if(selectedExe || selectedPids.isEmpty())
+          setStatus(tr("Process detected: %1 (PID %2).\nInjecting (attempt %3 of %4)...")
+                        .arg(info.name())
+                        .arg(pid)
+                        .arg(injectAttempts[pid])
+                        .arg(maxAttempts));
+
         ExecuteResult ret = RIDERDUCK_InjectIntoProcess(pid, env, capturefile, opts, false);
 
         if(ret.result.code == ResultCode::Succeeded && ret.ident != 0)
         {
           injectedPids.insert(pid);
+          injectErrors.remove(pid);
+          if(selectedExe || selectedPids.isEmpty())
+            setStatus(tr("Waiting for control connection: %1 (PID %2)...").arg(info.name()).arg(pid));
 
           if(candidateIdent == 0)
           {
@@ -1542,10 +1576,57 @@ void CaptureDialog::WaitForManualLaunch()
             candidateLoops = 0;
           }
         }
+        else
+        {
+          QString error = ret.result.code == ResultCode::Succeeded
+                              ? tr("Injection returned no target control identifier.")
+                              : QString(ret.result.Message());
+          injectErrors[pid] = error;
+          if(selectedExe || selectedPids.isEmpty())
+            setStatus(tr("Injection failed: %1 (PID %2), attempt %3 of %4.\n%5")
+                          .arg(info.name())
+                          .arg(pid)
+                          .arg(injectAttempts[pid])
+                          .arg(maxAttempts)
+                          .arg(error));
+        }
       }
 
+      if(cancelled.load())
+        break;
+
+      // A global hook may have succeeded despite the fallback injector reporting failure.
+      // Give its control connection a final chance before reporting exhausted retries.
       if(inspectTargets(processNames, processPaths))
         return;
+
+      bool allSelectedFailed = !selectedPids.isEmpty();
+      QStringList failures;
+      for(uint32_t pid : selectedPids)
+      {
+        if(injectedPids.contains(pid) || injectAttempts.value(pid) < maxSelectedAttempts)
+        {
+          allSelectedFailed = false;
+          continue;
+        }
+        failures << tr("%1 (PID %2)\n%3 attempts failed.\nLast error: %4")
+                        .arg(processNames.value(pid))
+                        .arg(pid)
+                        .arg(maxSelectedAttempts)
+                        .arg(injectErrors.value(pid));
+      }
+
+      if(allSelectedFailed)
+      {
+        launchError = tr("The process was detected, but RiderDuck could not inject into it.\n\n%1")
+                          .arg(failures.join(lit("\n\n")));
+        done.store(1);
+        return;
+      }
+
+      if(selectedPids.isEmpty() && hadSelectedProcess && candidateIdent == 0)
+        setStatus(tr("Waiting for process: %1...\nThe previous target is no longer running.")
+                      .arg(selectedExeName));
 
       if(candidateIdent != 0)
         candidateLoops++;
@@ -1559,10 +1640,15 @@ void CaptureDialog::WaitForManualLaunch()
   th->start();
 
   ShowProgressDialog(
-      this, tr("Waiting for %1 to launch...").arg(QFileInfo(exe).fileName()),
+      this, tr("Waiting for process: %1...").arg(QFileInfo(exe).fileName()),
       [&done]() { return done.load() != 0; }, ProgressUpdateMethod(),
-      [&cancelled]() { cancelled.store(1); });
+      [&cancelled]() { cancelled.store(1); },
+      [&statusMutex, &statusText]() {
+        QMutexLocker lock(&statusMutex);
+        return statusText;
+      });
 
+  bool wasCancelled = cancelled.load() != 0;
   cancelled.store(1);
   th->wait();
   th->deleteLater();
@@ -1575,6 +1661,9 @@ void CaptureDialog::WaitForManualLaunch()
   ui->toggleGlobal->setText(tr("Enable Global Hook"));
   ui->toggleGlobal->setChecked(false);
   UpdateGlobalHook();
+
+  if(!wasCancelled && !launchError.isEmpty())
+    RDDialog::critical(this, tr("Injection failed"), launchError);
 
   if(ident == 0)
     return;

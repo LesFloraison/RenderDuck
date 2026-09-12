@@ -249,7 +249,7 @@ extern "C" __declspec(dllexport) void __cdecl INTERNAL_ApplyEnvMods(void *ignore
   Process::ApplyEnvironmentModification();
 }
 
-void InjectDLL(HANDLE hProcess, rdcwstr libName)
+RDResult InjectDLL(HANDLE hProcess, rdcwstr libName)
 {
   wchar_t dllPath[MAX_PATH + 1] = {0};
   wcscpy_s(dllPath, libName.c_str());
@@ -258,12 +258,12 @@ void InjectDLL(HANDLE hProcess, rdcwstr libName)
 
   if(kernel32 == NULL)
   {
-    RDCERR("Couldn't get handle for kernel32.dll");
-    return;
+    RETURN_ERROR_RESULT(ResultCode::InjectionFailed, "Couldn't get handle for kernel32.dll");
   }
 
   void *remoteMem =
       VirtualAllocEx(hProcess, NULL, sizeof(dllPath), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  RDResult result;
   if(remoteMem)
   {
     BOOL success = WriteProcessMemory(hProcess, remoteMem, (void *)dllPath, sizeof(dllPath), NULL);
@@ -279,21 +279,30 @@ void InjectDLL(HANDLE hProcess, rdcwstr libName)
       }
       else
       {
-        RDCERR("Couldn't create remote thread for LoadLibraryW: %u", GetLastError());
+        DWORD err = GetLastError();
+        SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                         "CreateRemoteThread for LoadLibraryW failed, Windows error %u (0x%08x)",
+                         err, err);
       }
     }
     else
     {
-      RDCERR("Couldn't write remote memory %p with dllPath '%ls': %u", remoteMem, dllPath,
-             GetLastError());
+      DWORD err = GetLastError();
+      SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                       "WriteProcessMemory for DLL '%ls' failed, Windows error %u (0x%08x)",
+                       dllPath, err, err);
     }
 
     VirtualFreeEx(hProcess, remoteMem, 0, MEM_RELEASE);
   }
   else
   {
-    RDCERR("Couldn't allocate remote memory for DLL '%ls': %u", libName.c_str(), GetLastError());
+    DWORD err = GetLastError();
+    SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                     "VirtualAllocEx for DLL '%ls' failed, Windows error %u (0x%08x)",
+                     libName.c_str(), err, err);
   }
+  return result;
 }
 
 uintptr_t FindRemoteDLL(DWORD pid, rdcstr libName)
@@ -582,6 +591,15 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
       OpenProcess(PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION |
                       PROCESS_VM_WRITE | PROCESS_VM_READ | SYNCHRONIZE,
                   FALSE, pid);
+
+  if(hProcess == NULL)
+  {
+    DWORD err = GetLastError();
+    RDResult result;
+    SET_ERROR_RESULT(result, ResultCode::InjectionFailed,
+                     "OpenProcess for PID %u failed, Windows error %u (0x%08x)", pid, err, err);
+    return {result, 0};
+  }
 
   if(opts.delayForDebugger > 0)
   {
@@ -970,7 +988,13 @@ rdcpair<RDResult, uint32_t> Process::InjectIntoProcess(uint32_t pid,
     return {ResultCode::Succeeded, (uint32_t)exitCode};
   }
 
-  InjectDLL(hProcess, riderduckPath);
+  RDResult injectionResult = InjectDLL(hProcess, riderduckPath);
+
+  if(injectionResult != ResultCode::Succeeded)
+  {
+    CloseHandle(hProcess);
+    return {injectionResult, 0};
+  }
 
   const char *rdoc_dll = STRINGIZE(RDOC_BASE_NAME);
 
