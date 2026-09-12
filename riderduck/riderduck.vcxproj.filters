@@ -276,6 +276,9 @@
     <ClInclude Include="common\custom_assert.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="os\win32\win32_global_hook.h">
+      <Filter>OS\Win32</Filter>
+    </ClInclude>
     <ClInclude Include="os\win32\win32_specific.h">
       <Filter>OS\Win32</Filter>
     </ClInclude>
