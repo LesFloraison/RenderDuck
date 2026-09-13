@@ -145,18 +145,17 @@ private:
       dummyUsed = true;
     }
 
+    bool suppress = (Flags & D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY) != 0;
+
     HRESULT ret = real(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,
-                       SDKVersion, pUsedSwapDesc, ppSwapChain, ppDevice, pFeatureLevel, NULL);
+                       SDKVersion, pUsedSwapDesc, ppSwapChain, ppDevice, pFeatureLevel,
+                       suppress ? ppImmediateContext : NULL);
 
     SAFE_RELEASE(dummydev);
     if(dummyUsed)
       ppDevice = NULL;
 
     RDCDEBUG("Called real createdevice...");
-
-    bool suppress = false;
-
-    suppress = (Flags & D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY) != 0;
 
     if(suppress)
     {
