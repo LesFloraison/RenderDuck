@@ -1,8 +1,10 @@
 <p align="center"><img src="https://img.floraison.io/RenderDuck_small.png" /></p>
 
-RenderDuck is a fork of RenderDoc, aiming to bypass AC.
+Duckify Everything~ (｡ゝω•｡) ♡
 
-Ducky has grown up, now she's a rider!
+RenderDuck is a customized fork of RenderDoc, using inline Detour to enhance API hooking capabilities, designed to support games from platforms (Steam / Epic / third-party Launcher)
+
+Guide&Overview: [A customized RDC branch enhanced with Detour-based injection.](https://www.floraison.io/2026/09/15/)
 
 "Oopsie, I slipped! (＞﹏＜)"
 
