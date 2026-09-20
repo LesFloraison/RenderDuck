@@ -192,6 +192,13 @@ private:
                                                                              __in NvU32 opCode,
                                                                              __out bool *pSupported)
   {
+    if(!pDev || !pSupported)
+    {
+      if(pSupported)
+        *pSupported = false;
+      return NVAPI_INVALID_POINTER;
+    }
+
     INVAPID3DDevice *nvapiDev = NULL;
     HRESULT hr = pDev->QueryInterface(__uuidof(INVAPID3DDevice), (void **)&nvapiDev);
     // this will only succeed if it's our own wrapped device. It doesn't change the refcount, this
@@ -212,6 +219,13 @@ private:
                                                                              __in NvU32 opCode,
                                                                              __out bool *pSupported)
   {
+    if(!pDev || !pSupported)
+    {
+      if(pSupported)
+        *pSupported = false;
+      return NVAPI_INVALID_POINTER;
+    }
+
     INVAPID3DDevice *nvapiDev = NULL;
     HRESULT hr = pDev->QueryInterface(__uuidof(INVAPID3DDevice), (void **)&nvapiDev);
     // this will only succeed if it's our own wrapped device. It doesn't change the refcount, this

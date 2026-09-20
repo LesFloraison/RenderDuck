@@ -145,11 +145,10 @@ private:
       dummyUsed = true;
     }
 
-    bool suppress = (Flags & D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY) != 0;
-
+    // Keep capture wrapping enabled regardless of the runtime registry-layer flag.
     HRESULT ret = real(pAdapter, DriverType, Software, Flags, pFeatureLevels, FeatureLevels,
                        SDKVersion, pUsedSwapDesc, ppSwapChain, ppDevice, pFeatureLevel,
-                       suppress ? ppImmediateContext : NULL);
+                       NULL);
 
     SAFE_RELEASE(dummydev);
     if(dummyUsed)
@@ -157,11 +156,7 @@ private:
 
     RDCDEBUG("Called real createdevice...");
 
-    if(suppress)
-    {
-      RDCLOG("Application requested not to be hooked.");
-    }
-    else if(SUCCEEDED(ret) && ppDevice)
+    if(SUCCEEDED(ret) && ppDevice)
     {
       RDCDEBUG("succeeded and hooking.");
 

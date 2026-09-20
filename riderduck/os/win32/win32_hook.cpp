@@ -399,7 +399,15 @@ struct CachedHookData
     PIMAGE_OPTIONAL_HEADER optHeader =
         (PIMAGE_OPTIONAL_HEADER)((BYTE *)fileHeader + sizeof(IMAGE_FILE_HEADER));
 
-    DWORD iatOffset = optHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    const IMAGE_DATA_DIRECTORY &imports = optHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    DWORD iatOffset = imports.VirtualAddress;
+    if(iatOffset == 0 || imports.Size < sizeof(IMAGE_IMPORT_DESCRIPTOR) ||
+       iatOffset >= optHeader->SizeOfImage || imports.Size > optHeader->SizeOfImage - iatOffset)
+    {
+      FreeLibrary(refcountModHandle);
+      return;
+    }
+    const size_t descriptorCount = imports.Size / sizeof(IMAGE_IMPORT_DESCRIPTOR);
 
     IMAGE_IMPORT_DESCRIPTOR *importDesc = (IMAGE_IMPORT_DESCRIPTOR *)(baseAddress + iatOffset);
 
@@ -407,7 +415,7 @@ struct CachedHookData
     RDCDEBUG("=== import descriptors:");
 #endif
 
-    while(iatOffset && importDesc->FirstThunk)
+    for(size_t i = 0; i < descriptorCount && importDesc->FirstThunk; ++i)
     {
       const char *dllName = (const char *)(baseAddress + importDesc->Name);
 

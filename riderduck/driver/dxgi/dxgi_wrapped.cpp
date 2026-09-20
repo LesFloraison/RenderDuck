@@ -633,9 +633,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGIOutput6::FindClosestMatchingMode(
       return m_pReal->FindClosestMatchingMode(pModeToMatch, pClosestMatch,
                                               wrapDevice->GetRealIUnknown());
 
-    RDCERR("Unrecognised device in FindClosestMatchingMode()");
-
-    return E_INVALIDARG;
+    return m_pReal->FindClosestMatchingMode(pModeToMatch, pClosestMatch, pConcernedDevice);
   }
 
   return m_pReal->FindClosestMatchingMode(pModeToMatch, pClosestMatch, NULL);
@@ -664,9 +662,7 @@ HRESULT STDMETHODCALLTYPE WrappedIDXGIOutput6::FindClosestMatchingMode1(
       return m_pReal1->FindClosestMatchingMode1(pModeToMatch, pClosestMatch,
                                                 wrapDevice->GetRealIUnknown());
 
-    RDCERR("Unrecognised device in FindClosestMatchingMode1()");
-
-    return E_INVALIDARG;
+    return m_pReal1->FindClosestMatchingMode1(pModeToMatch, pClosestMatch, pConcernedDevice);
   }
 
   return m_pReal1->FindClosestMatchingMode1(pModeToMatch, pClosestMatch, NULL);
