@@ -25,6 +25,7 @@
 
 #include "dxgi_wrapped.h"
 #include "core/core.h"
+#include "driver/d3d11/d3d11_device_diagnostics.h"
 #include "serialise/serialiser.h"
 #include "dxgi_common.h"
 
@@ -546,6 +547,24 @@ HRESULT WrappedIDXGISwapChain4::GetDevice(
   return ret;
 }
 
+static void LogSwapchainFailure(IDXGISwapChain *swapchain, const char *operation, HRESULT result)
+{
+  if(SUCCEEDED(result))
+    return;
+
+  ID3D11Device *device = NULL;
+  if(SUCCEEDED(swapchain->GetDevice(__uuidof(ID3D11Device), (void **)&device)))
+  {
+    LogD3D11Failure(device, operation, result);
+    device->Release();
+  }
+  else
+  {
+    RDCERR("DXGI diagnostic: %s returned 0x%08x (D3D11 device unavailable)", operation,
+           (uint32_t)result);
+  }
+}
+
 HRESULT WrappedIDXGISwapChain4::Present(
     /* [in] */ UINT SyncInterval,
     /* [in] */ UINT Flags)
@@ -561,7 +580,9 @@ HRESULT WrappedIDXGISwapChain4::Present(
     m_pDevice->Present(this, SyncInterval, Flags);
   }
 
-  return m_pReal->Present(SyncInterval, Flags);
+  HRESULT ret = m_pReal->Present(SyncInterval, Flags);
+  LogSwapchainFailure(m_pReal, "Present", ret);
+  return ret;
 }
 
 HRESULT WrappedIDXGISwapChain4::Present1(UINT SyncInterval, UINT Flags,
@@ -578,7 +599,9 @@ HRESULT WrappedIDXGISwapChain4::Present1(UINT SyncInterval, UINT Flags,
     m_pDevice->Present(this, SyncInterval, Flags);
   }
 
-  return m_pReal1->Present1(SyncInterval, Flags, pPresentParameters);
+  HRESULT ret = m_pReal1->Present1(SyncInterval, Flags, pPresentParameters);
+  LogSwapchainFailure(m_pReal1, "Present1", ret);
+  return ret;
 }
 
 HRESULT STDMETHODCALLTYPE WrappedIDXGISwapChain4::GetRestrictToOutput(IDXGIOutput **ppRestrictToOutput)

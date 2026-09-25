@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include "d3d11_device.h"
+#include "d3d11_device_diagnostics.h"
 #include "d3d11_context.h"
 #include "d3d11_debug.h"
 #include "d3d11_resources.h"
@@ -1334,8 +1335,12 @@ HRESULT WrappedID3D11Device::CreateInputLayout(const D3D11_INPUT_ELEMENT_DESC *p
 {
   // validation, returns S_FALSE for valid params, or an error code
   if(ppInputLayout == NULL)
-    return m_pDevice->CreateInputLayout(pInputElementDescs, NumElements,
-                                        pShaderBytecodeWithInputSignature, BytecodeLength, NULL);
+  {
+    HRESULT ret = m_pDevice->CreateInputLayout(pInputElementDescs, NumElements,
+                                              pShaderBytecodeWithInputSignature, BytecodeLength, NULL);
+    LogD3D11Failure(m_pDevice, "CreateInputLayout(validation)", ret);
+    return ret;
+  }
 
   ID3D11InputLayout *real = NULL;
   ID3D11InputLayout *wrapped = NULL;
@@ -1343,6 +1348,8 @@ HRESULT WrappedID3D11Device::CreateInputLayout(const D3D11_INPUT_ELEMENT_DESC *p
   SERIALISE_TIME_CALL(ret = m_pDevice->CreateInputLayout(pInputElementDescs, NumElements,
                                                          pShaderBytecodeWithInputSignature,
                                                          BytecodeLength, &real));
+
+  LogD3D11Failure(m_pDevice, "CreateInputLayout", ret);
 
   if(SUCCEEDED(ret))
   {

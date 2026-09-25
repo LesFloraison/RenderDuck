@@ -89,6 +89,12 @@ bool ApplyHook(FunctionHook &hook, void **IATentry, bool &already)
 
 bool ApplyExportDetour(const char *libraryName, HMODULE module, FunctionHook &hook)
 {
+  // NVAPI is also used internally by the NVIDIA driver and NvCamera. A global detour
+  // routes those native queries through the application's extension filtering/wrappers,
+  // even for modules whose imports we deliberately leave alone. Keep NVAPI on the
+  // IAT/GetProcAddress path so application calls are hooked but driver queries stay native.
+  if(!_stricmp(libraryName, "nvapi.dll") || !_stricmp(libraryName, "nvapi64.dll"))
+    return false;
   if(module == NULL || hook.orig == NULL || hook.hook == NULL)
     return false;
 
@@ -248,6 +254,12 @@ struct CachedHookData
     // riderduck.dll, or tries to load it.
     if(strstr(lowername, "fraps") || strstr(lowername, "gameoverlayrenderer") ||
        strstr(lowername, STRINGIZE(RDOC_BASE_NAME) ".dll") == lowername)
+      return;
+
+    // NvCamera queries private NVAPI interfaces during game startup. Hooking its
+    // GetProcAddress import applies application-only NVAPI filtering to those queries
+    // and can cause DRIVER_INTERNAL_ERROR on the first Present (Mirror's Edge Catalyst).
+    if(!strcmp(lowername, "nvcamera32.dll") || !strcmp(lowername, "nvcamera64.dll"))
       return;
 
     // set module pointer if we are hooking exports from this module
