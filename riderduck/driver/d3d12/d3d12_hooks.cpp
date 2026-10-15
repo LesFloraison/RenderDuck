@@ -45,6 +45,31 @@ ID3DDevice *GetD3D12DeviceIfAlloc(IUnknown *dev)
   if(WrappedID3D12Device::IsAlloc(dev))
     return (WrappedID3D12Device *)dev;
 
+#if ENABLED(RDOC_WIN32)
+  // Streamline can put its own device/queue proxy around our wrapper. Resolve the
+  // underlying interface at the DXGI boundary so the swapchain remains captured.
+  HMODULE streamline = GetModuleHandleA("sl.interposer.dll");
+  if(dev && streamline)
+  {
+    typedef uint32_t(__cdecl *GetNativeInterface)(void *, void **);
+    GetNativeInterface getNative =
+        (GetNativeInterface)GetProcAddress(streamline, "slGetNativeInterface");
+    IUnknown *native = NULL;
+    if(getNative && getNative(dev, (void **)&native) == 0 && native)
+    {
+      ID3DDevice *wrapped = NULL;
+      if(WrappedID3D12CommandQueue::IsAlloc(native))
+        wrapped = (WrappedID3D12CommandQueue *)native;
+      else if(WrappedID3D12Device::IsAlloc(native))
+        wrapped = (WrappedID3D12Device *)native;
+
+      // slGetNativeInterface adds a reference; the proxy keeps its own reference.
+      native->Release();
+      return wrapped;
+    }
+  }
+#endif
+
   return NULL;
 }
 
@@ -572,6 +597,13 @@ public:
                                         D3D12EnableExperimentalFeatures_hook);
     GetD3D11On12On7.Register("d3d11on12.dll", "GetD3D11On12On7Interface",
                              GetD3D11On12On7Interface_hook);
+
+#if ENABLED(RDOC_WIN32)
+    // Streamline looks up exports directly. Ensure D3D12 is present when the
+    // initial hook pass runs, even if its later load bypasses loader hooks.
+    if(GetModuleHandleA("sl.interposer.dll"))
+      LoadLibraryA("d3d12.dll");
+#endif
 
     m_RecurseSlot = Threading::AllocateTLSSlot();
     Threading::SetTLSValue(m_RecurseSlot, NULL);
