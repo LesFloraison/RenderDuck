@@ -634,7 +634,10 @@ HRESULT WrappedID3D12Device::CreateResource(
     if(IsActiveCapturing(m_State))
     {
       wrapped->AddRef();
-      m_RefBuffers.push_back(wrapped);
+      {
+        SCOPED_LOCK(m_RefBuffersLock);
+        m_RefBuffers.push_back(wrapped);
+      }
       if(m_BindlessResourceUseActive)
         GetResourceManager()->MarkResourceFrameReferenced(wrapped->GetResourceID(),
                                                           BindlessRefTypeForRes(wrapped));

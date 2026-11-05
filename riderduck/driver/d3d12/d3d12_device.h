@@ -627,6 +627,9 @@ private:
   // it) and us releasing our reference on them.
   rdcarray<WrappedID3D12CommandQueue *> m_RefQueues;
   rdcarray<ID3D12Resource *> m_RefBuffers;
+  // Resource creation can run on multiple threads holding the capture transition read lock.
+  // The write lock protects swapping/clearing this array, but not concurrent appends.
+  Threading::CriticalSection m_RefBuffersLock;
 
   std::unordered_set<D3D12ResourceRecord *> m_ForcedReferences;
   Threading::CriticalSection m_ForcedReferencesLock;
@@ -874,8 +877,8 @@ private:
 
       count++;
 
-      // if this node is fully executed or not executed at all keep going to get the count, but don't process
-      if(*node->pLastBreadcrumbValue == node->BreadcrumbCount || *node->pLastBreadcrumbValue == 0)
+      // Skip completed nodes, but retain zero-progress nodes: the first operation may be hung.
+      if(*node->pLastBreadcrumbValue == node->BreadcrumbCount)
       {
         head = head->pNext;
         i++;

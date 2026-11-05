@@ -503,6 +503,15 @@ void WrappedID3D12Resource::GetMappableIDs(D3D12ResourceManager *rm,
   }
 }
 
+ID3D12Resource *D3D12ResourceManager::GetResourceWithRef(ResourceId id)
+{
+  // Keep lookup and retention atomic with respect to removal from the resource map. Release()
+  // can already have reached zero before removal, so ordinary AddRef() is not sufficient.
+  SCOPED_LOCK(m_Lock);
+  WrappedID3D12Resource *resource = GetResAs<WrappedID3D12Resource>(id, true);
+  return resource && resource->TryAddRef() ? resource : NULL;
+}
+
 rdcarray<ID3D12Resource *> WrappedID3D12Resource::AddRefBuffersBeforeCapture(D3D12ResourceManager *rm)
 {
   rdcarray<ID3D12Resource *> ret;
@@ -511,10 +520,9 @@ rdcarray<ID3D12Resource *> WrappedID3D12Resource::AddRefBuffersBeforeCapture(D3D
 
   for(size_t i = 0; i < addresses.size(); i++)
   {
-    ID3D12Resource *resource = (ID3D12Resource *)rm->GetResource(addresses[i].id);
+    ID3D12Resource *resource = rm->GetResourceWithRef(addresses[i].id);
     if(resource)
     {
-      resource->AddRef();
       ret.push_back(resource);
     }
   }

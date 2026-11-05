@@ -316,6 +316,20 @@ public:
     InterlockedIncrement(&m_iRefcount);
     return m_iRefcount;
   }
+  // For a resource-manager lookup protected against removal/freeing. A resource with zero
+  // references may already be inside its destructor and must not be resurrected.
+  bool TryAddRef()
+  {
+    unsigned int refs = InterlockedCompareExchange(&m_iRefcount, 0U, 0U);
+    while(refs != 0)
+    {
+      unsigned int previous = InterlockedCompareExchange(&m_iRefcount, refs + 1, refs);
+      if(previous == refs)
+        return true;
+      refs = previous;
+    }
+    return false;
+  }
   ULONG STDMETHODCALLTYPE Release()
   {
     unsigned int ret = InterlockedDecrement(&m_iRefcount);

@@ -3882,6 +3882,9 @@ rdcarray<DebugMessage> WrappedID3D12Device::GetDebugMessages()
 
     m_pInfoQueue->GetMessage(i, message, &len);
 
+    if(HasFatalError() && message->Severity <= D3D12_MESSAGE_SEVERITY_WARNING)
+      RDCLOG("D3D12 validation [%u]: %s", message->ID, message->pDescription);
+
     DebugMessage msg;
     msg.eventId = 0;
     msg.source = MessageSource::API;
@@ -4008,14 +4011,14 @@ void WrappedID3D12Device::DumpDRED(D3D12_AUTO_BREADCRUMB_NODE *node,
   }
 
   if(node->pCommandQueueDebugNameA)
-    qName = node->pCommandListDebugNameA;
+    qName = node->pCommandQueueDebugNameA;
   else if(node->pCommandQueueDebugNameW)
     qName = StringFormat::Wide2UTF8(node->pCommandQueueDebugNameW);
 
   if(qName.empty() && node->pCommandQueue)
   {
     ID3D12CommandQueue *q =
-        (ID3D12CommandQueue *)GetResourceManager()->GetWrapper(node->pCommandList);
+        (ID3D12CommandQueue *)GetResourceManager()->GetWrapper(node->pCommandQueue);
     if(q)
       qName = ToStr(GetResID(q));
   }
@@ -4024,14 +4027,19 @@ void WrappedID3D12Device::DumpDRED(D3D12_AUTO_BREADCRUMB_NODE *node,
   D3D12_DRED_BREADCRUMB_CONTEXT *ctx = contexts;
 
   RDCLOG("DRED Node on queue '%s' executing cmd '%s'", qName.c_str(), cmdName.c_str());
+  RDCLOG("DRED progress: %u / %u", lastExecuted, node->BreadcrumbCount);
 
   for(uint32_t i = 0; i < node->BreadcrumbCount; i++)
   {
+    // The breadcrumb value is a completed operation count, not an operation index.
+    if(lastExecuted == i)
+      RDCLOG("------ First uncompleted operation ------");
+
     if(ctx && numContexts > 0 && ctx->BreadcrumbIndex == i)
     {
       RDCLOG("  [%u]: %s -- %ls", i, ToStr(node->pCommandHistory[i]).c_str(), ctx->pContextString);
       // sometimes get duplicates?
-      while(ctx->BreadcrumbIndex == i)
+      while(numContexts > 0 && ctx->BreadcrumbIndex == i)
       {
         ctx++;
         numContexts--;
@@ -4041,9 +4049,6 @@ void WrappedID3D12Device::DumpDRED(D3D12_AUTO_BREADCRUMB_NODE *node,
     {
       RDCLOG("  [%u]: %s", i, ToStr(node->pCommandHistory[i]).c_str());
     }
-
-    if(lastExecuted == i)
-      RDCLOG("------ Last executed ------");
   }
 }
 

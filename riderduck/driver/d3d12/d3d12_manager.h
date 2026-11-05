@@ -1455,6 +1455,9 @@ public:
 
   ~D3D12ResourceManager() { SAFE_DELETE(m_RTManager); }
 
+  // Returns a retained resource, or NULL if it has been released or is being destroyed.
+  ID3D12Resource *GetResourceWithRef(ResourceId id);
+
   template <class T>
   T *GetResAs(ResourceId id, bool optional = false)
   {

@@ -1,0 +1,58 @@
+D3D12 capture regressions (Windows x64)
+
+These standalone tests use the public capture/replay APIs and a real D3D12 GPU.
+They do not need the GUI demo harness. Run from an x64 Visual Studio Developer
+Command Prompt in the repository root, after building riderduck.dll/riderduck.lib.
+Use a dedicated output directory so the replay executable loads the intended DLL.
+
+Build (cmd.exe syntax; change BUILD to the build under test):
+
+  set "BUILD=%CD%\x64\Release"
+  set "OUT=%CD%\build-d3d12-regressions"
+  if not exist "%OUT%" mkdir "%OUT%"
+  cl /nologo /EHsc /std:c++17 /MD /I . util\test\standalone\d3d12_capture_stress.cpp /Fo"%OUT%\stress.obj" /Fe"%OUT%\stress.exe" /link d3d12.lib dxgi.lib
+  cl /nologo /EHsc /std:c++17 /MD /I . util\test\standalone\d3d12_bindless_map_capture.cpp /Fo"%OUT%\capture.obj" /Fe"%OUT%\capture.exe" /link d3d12.lib d3dcompiler.lib
+  cl /nologo /EHsc /std:c++17 /MD /DRIDERDUCK_PLATFORM_WIN32 /I . util\test\standalone\d3d12_bindless_map_replay.cpp /Fo"%OUT%\replay.obj" /Fe"%OUT%\replay.exe" /link "%BUILD%\riderduck.lib"
+  copy /y "%BUILD%\riderduck.dll" "%OUT%\riderduck.dll"
+
+Resource retention tests:
+
+  "%OUT%\stress.exe" "%BUILD%\riderduck.dll" "%OUT%\normal"
+  "%OUT%\stress.exe" "%BUILD%\riderduck.dll" "%OUT%\churn" churn
+
+Both must exit 0 and print five successful captures, with no creation failures.
+Normal mode creates/releases buffers from eight threads during capture. Churn
+mode continues creation/release across StartFrameCapture and EndFrameCapture.
+The pre-fix DLL reproduced an access violation in EndFrameCapture's refBuffers
+Release loop; the array contained a null entry amid valid resource pointers.
+
+Persistent-map tests:
+
+  "%OUT%\capture.exe" "%BUILD%\riderduck.dll" "%OUT%\table" table
+  "%OUT%\replay.exe" "%OUT%\table_capture.rdc" gpu-validation
+  "%OUT%\capture.exe" "%BUILD%\riderduck.dll" "%OUT%\direct" direct
+  "%OUT%\replay.exe" "%OUT%\direct_capture.rdc" gpu-validation
+
+Use fresh prefixes, or select the numbered capture file reported by the library
+when a prefix already exists. All commands must exit 0. The live application and
+replay must both return 1234 5678 (hexadecimal).
+
+The SRV is created before capture. Its upload buffer stays mapped across capture,
+and is written twice before separate submissions. There are no descriptor writes
+or Unmap calls during capture that could accidentally preserve these updates.
+The output is checked after a forced replay, not just after opening the file.
+
+The two modes enable the device's bindless resource policy through an oversized
+root descriptor range (>100000) or the directly-indexed heap root-signature flag.
+Both deliberately read the mapped input through an ordinary descriptor table:
+this checks that enabling bindless tracking does not lose traditional bindings,
+which is the path used by the failing Ghost of Tsushima compute dispatch.
+
+The replay checker requests DRED and API validation; the optional second argument
+also requests GPU-based validation. A compatible SDK debug layer must be present.
+It fails on incorrect output or high-severity validation messages. Informational
+initial-state-ignored warnings from the runtime are printed, not treated as errors.
+
+Before the fix, both capture modes produce the correct live result but replay 0 0
+and the checker exits 1. Even replaying those old files with the fixed DLL fails:
+the writes were omitted at capture time and cannot be reconstructed on replay.

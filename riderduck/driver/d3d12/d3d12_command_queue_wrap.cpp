@@ -894,9 +894,11 @@ void WrappedID3D12CommandQueue::ExecuteCommandListsInternal(UINT NumCommandLists
 
     bool capframe = IsActiveCapturing(m_State);
     std::unordered_set<ResourceId> refdIDs;
-    // did an event happen which could use arbitrary GPU VAs (like vulkan BDA) meaning we have to
-    // consider maps to that memory
-    bool forceMapsListEvent = false;
+    // Bindless use skips descriptor reference tracking, so refdIDs is not a complete list of
+    // resources the GPU may read. Flush all maps in that case, just as for arbitrary GPU VAs.
+    // Marking all resources frame-referenced only preserves their initial contents; it does not
+    // capture writes to persistent mappings made after the start of the frame.
+    bool forceMapsListEvent = m_pDevice->IsBindlessResourceUseActive();
 
     for(UINT i = 0; i < NumCommandLists; i++)
     {

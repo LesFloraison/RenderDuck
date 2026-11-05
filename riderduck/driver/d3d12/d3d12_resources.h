@@ -125,6 +125,13 @@ public:
   void Evict() { Atomic::Dec32(&m_Resident); }
   NestedType *GetReal() { return m_pReal; }
   ULONG STDMETHODCALLTYPE AddRef() { return RefCounter12::SoftRef(m_pDevice); }
+  bool TryAddRef()
+  {
+    if(!RefCounter12::TryAddRef())
+      return false;
+    m_pDevice->SoftRef();
+    return true;
+  }
   ULONG STDMETHODCALLTYPE Release() { return RefCounter12::SoftRelease(m_pDevice); }
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject)
   {
